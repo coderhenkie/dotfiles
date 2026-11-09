@@ -31,7 +31,7 @@ sudo nala install -y xserver-xorg xinit lightdm lightdm-gtk-greeter light-locker
 sudo systemctl enable lightdm
 
 echo "🪟 Applicaties installeren (inclusief FUSE voor AppImages)..."
-sudo nala install -y i3 kitty polybar feh git rofi wget unzip fontconfig libfuse2 fuse
+sudo nala install -y i3 kitty polybar feh git rofi wget unzip fontconfig libfuse2 fuse picom
 
 # ==========================================
 # 3. Neovim (AppImage) Installeren
@@ -103,7 +103,7 @@ if [ ! -d "$DOTFILES_DIR" ]; then
 fi
 
 # De array met applicaties die we via dotfiles beheren
-APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim")
+APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom")
 
 for app in "${APPS[@]}"; do
     TARGET_DIR="$CONFIG_DIR/$app"
