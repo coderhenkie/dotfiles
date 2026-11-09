@@ -9,12 +9,12 @@ set -eu
 echo "🚀 Start systeem configuratie..."
 
 # ==========================================
-# 1. Pakketbeheer optimaliseren met Nala
+# 1. Pakketbeheer & Basis (Nala, Git, Curl)
 # ==========================================
-echo "📦 Basis updaten en Nala installeren..."
+echo "📦 Basis updaten en Nala/Git installeren..."
 sudo apt update
-# Installeer nala en curl (nodig voor latere stappen)
-sudo apt install -y nala curl
+# We installeren git hier al, zodat we direct de dotfiles kunnen ophalen
+sudo apt install -y nala curl git
 
 echo "🏎️ Snelste mirrors ophalen met Nala..."
 # --auto kiest zelf de snelste mirrors, -y accepteert dit zonder vragen
@@ -24,17 +24,32 @@ echo "📦 Systeem upgraden via Nala..."
 sudo nala upgrade -y
 
 # ==========================================
-# 2. Xorg, Display Manager & Applicaties
+# 2. Meest Recente Dotfiles Ophalen
+# ==========================================
+echo "📁 Meest recente dotfiles downloaden..."
+DOTFILES_DIR="$HOME/dotfiles"
+
+# Haal altijd de nieuwste versie op, of clone als de map niet bestaat
+if [ -d "$DOTFILES_DIR/.git" ]; then
+    echo "🔄 Dotfiles map bestaat al. Updaten naar de nieuwste versie (git pull)..."
+    git -C "$DOTFILES_DIR" pull
+else
+    echo "🔧 Dotfiles clonen vanaf GitHub..."
+    git clone https://github.com/coderhenkie/dotfiles.git "$DOTFILES_DIR"
+fi
+
+# ==========================================
+# 3. Xorg, Display Manager & Applicaties
 # ==========================================
 echo "🖥️ Xorg en LightDM installeren..."
 sudo nala install -y xserver-xorg xinit lightdm lightdm-gtk-greeter light-locker
 sudo systemctl enable lightdm
 
 echo "🪟 Applicaties installeren (inclusief FUSE voor AppImages)..."
-sudo nala install -y i3 kitty polybar feh git rofi wget unzip fontconfig libfuse2 fuse picom psmisc
+sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc
 
 # ==========================================
-# 3. Neovim (AppImage) Installeren
+# 4. Neovim (AppImage) Installeren
 # ==========================================
 echo "📝 Neovim installeren als AppImage..."
 APPIMAGE_DIR="$HOME/appimages"
@@ -59,7 +74,7 @@ else
 fi
 
 # ==========================================
-# 3.5 PATH configuratie voor ~/.local/bin
+# 4.5 PATH configuratie voor ~/.local/bin
 # ==========================================
 echo "🔧 PATH controleren voor ~/.local/bin..."
 if ! grep -q "$HOME/.local/bin" "$HOME/.bashrc"; then
@@ -70,7 +85,7 @@ else
 fi
 
 # ==========================================
-# 4. Nerd Fonts Installeren
+# 5. Nerd Fonts Installeren
 # ==========================================
 echo "🔤 JetBrainsMono Nerd Font installeren..."
 FONT_DIR="$HOME/.local/share/fonts"
@@ -87,20 +102,29 @@ else
 fi
 
 # ==========================================
-# 5. Dotfiles Architectuur
+# 6. Pywal (AI Color Engine) Installeren
 # ==========================================
-echo "📁 Dotfiles structuur voorbereiden..."
+echo "🎨 Pywal en Python dependencies installeren..."
+sudo nala install -y python3-pip python3-venv imagemagick
 
-DOTFILES_DIR="$HOME/dotfiles"
+echo "🐍 Virtuele omgeving voor Pywal aanmaken in ~/.local/pywal-venv..."
+python3 -m venv "$HOME/.local/pywal-venv"
+
+echo "⬇️ Pywal installeren in de virtuele omgeving..."
+"$HOME/.local/pywal-venv/bin/pip" install pywal
+
+echo "🔗 Symlink maken voor Pywal (wal) in ~/.local/bin..."
+ln -sf "$HOME/.local/pywal-venv/bin/wal" "$LOCAL_BIN/wal"
+echo "✅ Pywal succesvol geïnstalleerd."
+
+# ==========================================
+# 7. Dotfiles Architectuur & Symlinks
+# ==========================================
+echo "📁 Symlinks aanmaken voor de configuratiebestanden..."
 CONFIG_DIR="$HOME/.config"
 
-# CRUCIALE FIX: Zorg dat de .config map bestaat vóórdat we gaan linken
+# Zorg dat de .config map bestaat vóórdat we gaan linken
 mkdir -p "$CONFIG_DIR"
-
-if [ ! -d "$DOTFILES_DIR" ]; then
-    echo "🔧 Dotfiles clonen vanaf GitHub..."
-    git clone https://github.com/coderhenkie/dotfiles.git "$DOTFILES_DIR"
-fi
 
 # De array met applicaties die we via dotfiles beheren
 APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom")
@@ -125,7 +149,7 @@ for app in "${APPS[@]}"; do
 done
 
 # ==========================================
-# 5.5 Color Engine Bootstrap
+# 8. Color Engine Bootstrap
 # ==========================================
 echo "🎨 Standaard thema (bootstrap) genereren in ~/.cache/theme..."
 CACHE_DIR="$HOME/.cache/theme"
@@ -174,7 +198,7 @@ EOF
 echo "✅ Bootstrap thema gegenereerd."
 
 # ==========================================
-# 6. Rechten goedzetten
+# 9. Rechten goedzetten
 # ==========================================
 echo "🔒 Uitvoerrechten instellen voor scripts..."
 
@@ -183,10 +207,16 @@ if [ -f "$DOTFILES_DIR/polybar/launch.sh" ]; then
     echo "✅ Polybar launch script uitvoerbaar gemaakt."
 fi
 
-# Maak ook het theme-selector script uitvoerbaar
+# Maak het theme-selector script uitvoerbaar
 if [ -f "$DOTFILES_DIR/scripts/theme-selector.sh" ]; then
     chmod +x "$DOTFILES_DIR/scripts/theme-selector.sh"
     echo "✅ Theme-selector script uitvoerbaar gemaakt."
+fi
+
+# Maak het ai-theme script uitvoerbaar
+if [ -f "$DOTFILES_DIR/scripts/ai-theme.sh" ]; then
+    chmod +x "$DOTFILES_DIR/scripts/ai-theme.sh"
+    echo "✅ AI-theme script uitvoerbaar gemaakt."
 fi
 
 echo "🎉 Setup voltooid!"
