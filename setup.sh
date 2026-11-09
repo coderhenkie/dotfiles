@@ -8,20 +8,66 @@ set -eu
 
 echo "🚀 Start systeem configuratie..."
 
-# 1. Repositories updaten
-echo "📦 Repositories updaten..."
+# ==========================================
+# 1. Pakketbeheer optimaliseren met Nala
+# ==========================================
+echo "📦 Basis updaten en Nala installeren..."
 sudo apt update
-sudo apt upgrade -y
+# Installeer nala en curl (nodig voor latere stappen)
+sudo apt install -y nala curl
 
-# 2. Xorg en Display Manager installeren
+echo "🏎️ Snelste mirrors ophalen met Nala..."
+# --auto kiest zelf de snelste mirrors, -y accepteert dit zonder vragen
+sudo nala fetch --auto -y
+
+echo "📦 Systeem upgraden via Nala..."
+sudo nala upgrade -y
+
+# ==========================================
+# 2. Xorg, Display Manager & Applicaties
+# ==========================================
 echo "🖥️ Xorg en LightDM installeren..."
-sudo apt install -y xserver-xorg xinit lightdm lightdm-gtk-greeter light-locker
+sudo nala install -y xserver-xorg xinit lightdm lightdm-gtk-greeter light-locker
 sudo systemctl enable lightdm
 
-# 3. Window Manager & Applicaties installeren
+echo "🪟 Applicaties installeren (inclusief FUSE voor AppImages)..."
+sudo nala install -y i3 kitty polybar feh git rofi wget unzip fontconfig libfuse2 fuse
 
-echo "🪟 Applicaties installeren..."
-sudo apt install -y i3 kitty polybar feh git rofi wget unzip fontconfig
+# ==========================================
+# 3. Neovim (AppImage) Installeren
+# ==========================================
+echo "📝 Neovim installeren als AppImage..."
+APPIMAGE_DIR="$HOME/appimages"
+LOCAL_BIN="$HOME/.local/bin"
+
+mkdir -p "$APPIMAGE_DIR"
+mkdir -p "$LOCAL_BIN"
+
+if [ ! -f "$APPIMAGE_DIR/nvim.appimage" ]; then
+    echo "⬇️ Neovim downloaden..."
+    curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage
+    
+    # Maak uitvoerbaar en verplaats naar de appimages map
+    chmod u+x nvim-linux-x86_64.appimage
+    mv nvim-linux-x86_64.appimage "$APPIMAGE_DIR/nvim.appimage"
+    
+    # Maak een symlink in ~/.local/bin zodat je gewoon 'nvim' kunt typen
+    ln -sf "$APPIMAGE_DIR/nvim.appimage" "$LOCAL_BIN/nvim"
+    echo "✅ Neovim geïnstalleerd in $APPIMAGE_DIR en gelinkt naar $LOCAL_BIN"
+else
+    echo "✅ Neovim was al geïnstalleerd."
+fi
+
+# ==========================================
+# 3.5 PATH configuratie voor ~/.local/bin
+# ==========================================
+echo "🔧 PATH controleren voor ~/.local/bin..."
+if ! grep -q "$HOME/.local/bin" "$HOME/.bashrc"; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    echo "✅ ~/.local/bin toegevoegd aan ~/.bashrc"
+else
+    echo "✅ PATH was al correct ingesteld."
+fi
 
 # ==========================================
 # 4. Nerd Fonts Installeren
@@ -34,7 +80,6 @@ if [ ! -d "$FONT_DIR/JetBrainsMono" ]; then
     wget -qO /tmp/JetBrainsMono.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
     unzip -qo /tmp/JetBrainsMono.zip -d "$FONT_DIR/JetBrainsMono"
     rm /tmp/JetBrainsMono.zip
-    # Update de font cache van het systeem
     fc-cache -fv
     echo "✅ Font geïnstalleerd."
 else
@@ -50,13 +95,12 @@ DOTFILES_DIR="$HOME/dotfiles"
 CONFIG_DIR="$HOME/.config"
 
 if [ ! -d "$DOTFILES_DIR" ]; then
-    mkdir -p "$DOTFILES_DIR"
-    echo "🔧 Git repository initialiseren..."
-    git -C "$DOTFILES_DIR" init
+    echo "🔧 Dotfiles clonen vanaf GitHub..."
+    git clone https://github.com/JOUW_NAAM/dotfiles.git "$DOTFILES_DIR"
 fi
 
-# Nieuw: rofi toegevoegd aan de array
-APPS=("i3" "kitty" "polybar" "feh" "rofi")
+# Nieuw: nvim toegevoegd aan de array
+APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim")
 
 for app in "${APPS[@]}"; do
     TARGET_DIR="$CONFIG_DIR/$app"
@@ -76,5 +120,15 @@ for app in "${APPS[@]}"; do
         ln -s "$SOURCE_DIR" "$TARGET_DIR"
     fi
 done
+
+# ==========================================
+# 6. Rechten goedzetten
+# ==========================================
+echo "🔒 Uitvoerrechten instellen voor scripts..."
+
+if [ -f "$DOTFILES_DIR/polybar/launch.sh" ]; then
+    chmod +x "$DOTFILES_DIR/polybar/launch.sh"
+    echo "✅ Polybar launch script uitvoerbaar gemaakt."
+fi
 
 echo "🎉 Setup voltooid!"
