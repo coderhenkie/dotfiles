@@ -4,6 +4,9 @@ include ~/.cache/theme/i3.conf
 # Sneltoets om je Theme-Selector te openen (Mod + t)
 bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/theme-selector.sh
 
+# Sneltoets voor AI-Wallpaper thema (Mod + w)
+bindsym $mod+shift+w exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
+
 # i3 config file (v4)
 #
 # Please see https://i3wm.org/docs/userguide.html for a complete reference!
@@ -158,9 +161,8 @@ bindsym $mod+r mode "resize"
 # AANGEPAST: Standaard i3bar verwijderd en vervangen door Polybar
 exec_always --no-startup-id ~/.config/polybar/launch.sh
 
-# AANGEPAST: Feh instellen voor de wallpaper
-# Zorg dat je een map 'wallpapers' maakt in je dotfiles en daar een afbeelding in zet!
-exec_always --no-startup-id feh --bg-fill ~/dotfiles/wallpapers/background.jpg
+# Herstel altijd de laatst gekozen wallpaper
+exec_always --no-startup-id ~/.fehbg
 
 # Start Picom voor schaduwen en transparantie
 exec_always --no-startup-id picom --config ~/.config/picom/picom.conf -b
