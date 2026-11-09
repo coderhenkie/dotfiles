@@ -46,7 +46,7 @@ sudo nala install -y xserver-xorg xinit lightdm lightdm-gtk-greeter light-locker
 sudo systemctl enable lightdm
 
 echo "🪟 Applicaties installeren (inclusief FUSE voor AppImages)..."
-sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc
+sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc qutebrowser
 
 # ==========================================
 # 4. Neovim (AppImage) Installeren
@@ -127,7 +127,7 @@ CONFIG_DIR="$HOME/.config"
 mkdir -p "$CONFIG_DIR"
 
 # De array met applicaties die we via dotfiles beheren
-APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom")
+APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "qutebrowser")
 
 for app in "${APPS[@]}"; do
     TARGET_DIR="$CONFIG_DIR/$app"
@@ -195,6 +195,21 @@ cat <<EOF > "$CACHE_DIR/rofi.rasi"
     text-color: @fg;
 }
 EOF
+
+# Qutebrowser
+cat <<EOF > "$CACHE_DIR/qutebrowser.py"
+c.colors.statusbar.normal.bg = "$BG"
+c.colors.statusbar.normal.fg = "$FG"
+c.colors.tabs.even.bg = "$BG"
+c.colors.tabs.even.fg = "$FG"
+c.colors.tabs.odd.bg = "$BG"
+c.colors.tabs.odd.fg = "$FG"
+c.colors.tabs.selected.even.bg = "$ACCENT"
+c.colors.tabs.selected.even.fg = "$BG"
+c.colors.tabs.selected.odd.bg = "$ACCENT"
+c.colors.tabs.selected.odd.fg = "$BG"
+EOF
+
 echo "✅ Bootstrap thema gegenereerd."
 
 # ==========================================

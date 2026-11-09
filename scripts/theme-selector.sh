@@ -53,5 +53,19 @@ text-color: @fg;
 }
 EOF
 
+# Genereer het Qutebrowser bestand
+cat <<EOF > "$CACHE_DIR/qutebrowser.py"
+c.colors.statusbar.normal.bg = "$BG"
+c.colors.statusbar.normal.fg = "$FG"
+c.colors.tabs.even.bg = "$BG"
+c.colors.tabs.even.fg = "$FG"
+c.colors.tabs.odd.bg = "$BG"
+c.colors.tabs.odd.fg = "$FG"
+c.colors.tabs.selected.even.bg = "$ACCENT"
+c.colors.tabs.selected.even.fg = "$BG"
+c.colors.tabs.selected.odd.bg = "$ACCENT"
+c.colors.tabs.selected.odd.fg = "$BG"
+EOF
+
 # 6. Herstart de interface om kleuren toe te passen
 i3-msg restart
