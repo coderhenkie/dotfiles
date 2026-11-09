@@ -72,7 +72,19 @@ c.colors.tabs.selected.even.bg = "$ACCENT"
 c.colors.tabs.selected.even.fg = "$BG"
 c.colors.tabs.selected.odd.bg = "$ACCENT"
 c.colors.tabs.selected.odd.fg = "$BG"
+
+# Dark Reader & Adblocker
+c.colors.webpage.darkmode.enabled = True
+c.colors.webpage.preferred_color_scheme = "dark"
+c.content.blocking.enabled = True
+c.content.blocking.method = "both"
 EOF
+
+# Vertel Qutebrowser om direct te updaten
+if pgrep -x "qutebrowser" > /dev/null; then
+    qutebrowser ":config-source" &
+fi
+
 
 # 8. Herstart de interface om alles toe te passen
 bash ~/.config/polybar/launch.sh &

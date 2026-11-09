@@ -65,7 +65,21 @@ c.colors.tabs.selected.even.bg = "$ACCENT"
 c.colors.tabs.selected.even.fg = "$BG"
 c.colors.tabs.selected.odd.bg = "$ACCENT"
 c.colors.tabs.selected.odd.fg = "$BG"
+
+# --- Plugin Vervangers ---
+# Dark Reader: Forceer donkere modus op alle websites
+c.colors.webpage.darkmode.enabled = True
+c.colors.webpage.preferred_color_scheme = "dark"
+
+# Ghostery: Zet de Brave ad- en trackerblocker aan
+c.content.blocking.enabled = True
+c.content.blocking.method = "both"
 EOF
+
+# Vertel Qutebrowser om direct te updaten
+if pgrep -x "qutebrowser" > /dev/null; then
+    qutebrowser ":config-source" &
+fi
 
 # 6. Herstart de interface om kleuren toe te passen
 i3-msg restart
