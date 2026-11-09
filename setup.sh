@@ -46,11 +46,11 @@ mkdir -p "$LOCAL_BIN"
 if [ ! -f "$APPIMAGE_DIR/nvim.appimage" ]; then
     echo "⬇️ Neovim downloaden..."
     curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage
-    
+
     # Maak uitvoerbaar en verplaats naar de appimages map
     chmod u+x nvim-linux-x86_64.appimage
     mv nvim-linux-x86_64.appimage "$APPIMAGE_DIR/nvim.appimage"
-    
+
     # Maak een symlink in ~/.local/bin zodat je gewoon 'nvim' kunt typen
     ln -sf "$APPIMAGE_DIR/nvim.appimage" "$LOCAL_BIN/nvim"
     echo "✅ Neovim geïnstalleerd in $APPIMAGE_DIR en gelinkt naar $LOCAL_BIN"
@@ -118,11 +118,60 @@ for app in "${APPS[@]}"; do
             echo "⚠️ Backup maken naar ${TARGET_DIR}.bak..."
             mv "$TARGET_DIR" "${TARGET_DIR}.bak"
         fi
-        
+
         echo "🔗 Symlink maken: $TARGET_DIR -> $SOURCE_DIR"
         ln -s "$SOURCE_DIR" "$TARGET_DIR"
     fi
 done
+
+# ==========================================
+# 5.5 Color Engine Bootstrap
+# ==========================================
+echo "🎨 Standaard thema (bootstrap) genereren in ~/.cache/theme..."
+CACHE_DIR="$HOME/.cache/theme"
+mkdir -p "$CACHE_DIR"
+
+# Kies standaardkleuren (Dracula-achtig) voor de eerste run
+BG="#282a36"
+FG="#f8f8f2"
+ACCENT="#bd93f9"
+
+# Polybar
+cat <<EOF > "$CACHE_DIR/polybar.ini"
+[colors]
+background = $BG
+foreground = $FG
+primary = $ACCENT
+EOF
+
+# Kitty
+cat <<EOF > "$CACHE_DIR/kitty.conf"
+background $BG
+foreground $FG
+cursor $ACCENT
+selection_background $ACCENT
+color2 $ACCENT
+EOF
+
+# i3
+cat <<EOF > "$CACHE_DIR/i3.conf"
+set \$bg $BG
+set \$fg $FG
+set \$accent $ACCENT
+client.focused \$accent \$accent \$bg \$accent \$accent
+EOF
+
+# Rofi
+cat <<EOF > "$CACHE_DIR/rofi.rasi"
+* {
+    bg: $BG;
+    fg: $FG;
+    accent: $ACCENT;
+    background-color: @bg;
+    text-color: @fg;
+}
+EOF
+echo "✅ Bootstrap thema gegenereerd."
 
 # ==========================================
 # 6. Rechten goedzetten
@@ -132,6 +181,12 @@ echo "🔒 Uitvoerrechten instellen voor scripts..."
 if [ -f "$DOTFILES_DIR/polybar/launch.sh" ]; then
     chmod +x "$DOTFILES_DIR/polybar/launch.sh"
     echo "✅ Polybar launch script uitvoerbaar gemaakt."
+fi
+
+# Maak ook het theme-selector script uitvoerbaar
+if [ -f "$DOTFILES_DIR/scripts/theme-selector.sh" ]; then
+    chmod +x "$DOTFILES_DIR/scripts/theme-selector.sh"
+    echo "✅ Theme-selector script uitvoerbaar gemaakt."
 fi
 
 echo "🎉 Setup voltooid!"
