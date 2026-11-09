@@ -31,7 +31,7 @@ sudo nala install -y xserver-xorg xinit lightdm lightdm-gtk-greeter light-locker
 sudo systemctl enable lightdm
 
 echo "🪟 Applicaties installeren (inclusief FUSE voor AppImages)..."
-sudo nala install -y i3 kitty polybar feh git rofi wget unzip fontconfig libfuse2 fuse picom
+sudo nala install -y i3 kitty polybar feh git rofi wget unzip fontconfig libfuse2 fuse picom psmisc
 
 # ==========================================
 # 3. Neovim (AppImage) Installeren
