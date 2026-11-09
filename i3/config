@@ -1,3 +1,9 @@
+# Laad het dynamische thema in
+include ~/.cache/theme/i3.conf
+
+# Sneltoets om je Theme-Selector te openen (Mod + t)
+bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/theme-selector.sh
+
 # i3 config file (v4)
 #
 # Please see https://i3wm.org/docs/userguide.html for a complete reference!
@@ -155,3 +161,6 @@ exec_always --no-startup-id ~/.config/polybar/launch.sh
 # AANGEPAST: Feh instellen voor de wallpaper
 # Zorg dat je een map 'wallpapers' maakt in je dotfiles en daar een afbeelding in zet!
 exec_always --no-startup-id feh --bg-fill ~/dotfiles/wallpapers/background.jpg
+
+# Start Picom voor schaduwen en transparantie
+exec_always --no-startup-id picom --config ~/.config/picom/picom.conf -b

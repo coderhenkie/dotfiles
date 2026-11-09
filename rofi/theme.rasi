@@ -1,0 +1,55 @@
+@import "~/.cache/theme/rofi.rasi"
+
+window {
+    width: 30%;
+    border: 2px;
+    border-color: @accent;
+    border-radius: 8px;
+    padding: 15px;
+}
+
+mainbox {
+    spacing: 10px;
+}
+
+inputbar {
+    padding: 8px;
+    background-color: @bg;
+    border: 0 0 2px 0;
+    border-color: @accent;
+    children: [prompt, entry];
+}
+
+prompt {
+    text-color: @accent;
+    padding: 0 10px 0 0;
+}
+
+listview {
+    lines: 6;
+    spacing: 5px;
+    scrollbar: false;
+    border: 0px;
+}
+
+element {
+    padding: 8px;
+    border-radius: 4px;
+}
+
+element selected {
+    background-color: @accent;
+    text-color: @bg;
+}
+
+element-text {
+    background-color: inherit;
+    text-color: inherit;
+    vertical-align: 0.5;
+}
+
+element-icon {
+    size: 1.5em;
+    background-color: inherit;
+    padding: 0 10px 0 0;
+}

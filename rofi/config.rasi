@@ -7,4 +7,4 @@ configuration {
     display-drun: "   Apps ";
 }
 
-@theme "gruvbox-dark"
+@theme "theme"
