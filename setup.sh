@@ -94,12 +94,15 @@ echo "📁 Dotfiles structuur voorbereiden..."
 DOTFILES_DIR="$HOME/dotfiles"
 CONFIG_DIR="$HOME/.config"
 
+# CRUCIALE FIX: Zorg dat de .config map bestaat vóórdat we gaan linken
+mkdir -p "$CONFIG_DIR"
+
 if [ ! -d "$DOTFILES_DIR" ]; then
     echo "🔧 Dotfiles clonen vanaf GitHub..."
-    git clone https://github.com/JOUW_NAAM/dotfiles.git "$DOTFILES_DIR"
+    git clone https://github.com/coderhenkie/dotfiles.git "$DOTFILES_DIR"
 fi
 
-# Nieuw: nvim toegevoegd aan de array
+# De array met applicaties die we via dotfiles beheren
 APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim")
 
 for app in "${APPS[@]}"; do
