@@ -14,9 +14,10 @@ mainbox {
 
 inputbar {
     padding: 8px;
-    background-color: @bg;
+    background-color: @bg-alt;
     border: 0 0 2px 0;
     border-color: @accent;
+    border-radius: 4px;
     children: [prompt, entry];
 }
 
