@@ -1,0 +1,7 @@
+# Herdr basisconfiguratie referentie
+# Het actieve bestand (~/.config/herdr/config.toml) wordt door scripts/apply-theme.sh
+# dynamisch gegenereerd in ~/.cache/theme/herdr.toml en daarnaar gelinkt.
+onboarding = false
+
+[theme]
+name = "dracula"

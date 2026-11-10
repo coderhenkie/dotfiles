@@ -8,53 +8,68 @@ Een kogelvrije, 100% reproduceerbare dotfiles-setup voor Debian 13 (Trixie) met 
 ### 2. Geïnstalleerde Applicaties: Wat, Waar & Waarom
 De meeste software wordt via het `setup.sh` script geïnstalleerd via `nala` (standaard `/usr/bin/`). Specifieke tools hebben eigen locaties:
 
-*   **Pakketbeheer & Basis**: `nala` (snellere apt frontend met parallelle downloads), `curl`, `git`, `wget`, `unzip`.
-*   **Display & Window Manager**: `xserver-xorg`, `xinit`, `lightdm` & `lightdm-gtk-greeter` (login manager), `light-locker` (screen locker), `i3` (tiling window manager), `picom` (compositor voor transparantie/schaduwen).
+*   **Pakketbeheer & Basis**: `nala` (snellere apt frontend met parallelle downloads), `curl`, `git`, `wget`, `unzip`, `jq`, `npm`, `psmisc`.
+*   **Display & Window Manager**: `xserver-xorg`, `xinit`, `lightdm` & `lightdm-gtk-greeter` (login manager), `light-locker` (screen locker), `i3` (tiling window manager), `picom` (compositor voor transparantie, schaduwen en afgeronde hoeken).
 *   **Core Desktop Apps**:
     *   `kitty`: Razendsnelle, GPU-geaccelereerde terminal.
     *   `qutebrowser`: Toetsenbord-gestuurde browser (Vim-bindings). Gekozen voor pure efficiëntie.
+    *   `firefox-esr`: Geïnstalleerd als volwaardige fallback-browser met een automatisch geconfigureerd `rice.default`-profiel en dynamische `userChrome.css`.
     *   `thunar`: Lichtgewicht GTK3 file manager (vervangt zware alternatieven).
     *   `polybar`: Modulaire statusbalk.
-    *   `rofi`: Applicatie-launcher en (in ons geval) de engine voor keuzemenu's zoals thema- en wallpaper-selectie.
-*   **Theming & Tools**:
+    *   `rofi`: Applicatie-launcher en de engine voor keuzemenu's zoals thema- en wallpaper-selectie.
+*   **Theming & Systeem Tools**:
     *   `feh`: Zeer lichte image viewer, exclusief gebruikt om wallpapers in te stellen.
-    *   `fastfetch`: Moderne C-gebaseerde vervanger van neofetch voor systeeminformatie.
+    *   `fastfetch` & `btop`: Moderne systeeminformatie en resource-monitoring in de terminal.
     *   `fontconfig` & *JetBrainsMono Nerd Font*: Font handmatig in `~/.local/share/fonts/` gezet voor terminal/Polybar iconen.
 *   **Maatwerk Installaties (Buiten APT om)**:
-    *   `Neovim`: Geïnstalleerd als AppImage in `~/appimages/nvim.appimage` met een symlink naar `~/.local/bin/nvim`. (Vereist `libfuse2` en `fuse`, geïnstalleerd via nala). Gekozen om altijd een moderne versie te hebben, los van Debian's trage releasecyclus.
+    *   `Neovim`: Geïnstalleerd als AppImage in `~/appimages/nvim.appimage` met een symlink naar `~/.local/bin/nvim` (vereist `libfuse2` en `fuse`). Gekozen om altijd een moderne versie te hebben, los van Debian's releasecyclus.
+    *   `Obsidian`: Laatste x86_64 AppImage automatisch opgehaald via de GitHub API (`jq`), geplaatst in `~/appimages/obsidian.appimage` met symlink naar `~/.local/bin/obsidian` en een `.desktop`-entry (met `--no-sandbox`) in `~/.local/share/applications/obsidian.desktop` voor Rofi.
+    *   `Herdr`: Geïnstalleerd via `https://herdr.dev/install.sh`.
+    *   `Antigravity CLI`: Geïnstalleerd via `curl -fsSL https://antigravity.google/cli/install.sh | bash`.
     *   `Pywal`: De AI color-extractor. Geïnstalleerd in een virtuele Python-omgeving (`~/.local/pywal-venv`) via `pip` (met dependencies `python3-pip`, `python3-venv`, `imagemagick`). Symlink geplaatst in `~/.local/bin/wal`.
 
 ### 3. Architectuur & Mappenstructuur
-- **Master Repo (`~/dotfiles`)**: Bevat alle statische configuraties en bash-scripts. Beheerd via git. Het master `setup.sh` script pullt altijd de nieuwste versie voordat het iets anders doet.
-- **Symlinks (`~/.config/`)**: De mappen voor i3, kitty, polybar, rofi, qutebrowser en picom worden via het masterscript direct gelinkt naar `~/dotfiles/`.
+- **Master Repo (`~/dotfiles`)**: Bevat alle statische configuraties, wallpapers, thema's en bash-scripts. Beheerd via git. Het master `setup.sh` script pullt altijd de nieuwste versie voordat het iets anders doet.
+- **Symlinks (`~/.config/`)**: De mappen voor `i3`, `kitty`, `polybar`, `feh`, `rofi`, `nvim`, `picom` en `qutebrowser` worden via het masterscript direct gelinkt naar `~/dotfiles/` (lege mappen `nvim` en `feh` worden bewaard met `.gitkeep`).
 - **Dynamische Cache (`~/.cache/theme/`)**: Om de git-repo schoon te houden, bevatten de dotfiles GEEN hardcoded kleuren. Alle applicaties 'sourcen' (lezen) hun kleuren in via gegenereerde bestanden in deze map.
 
 ### 4. Dotfiles & Specifieke Configuratiewijzigingen
 Om de dynamische Color Engine te laten werken, zijn de volgende unieke wijzigingen in de dotfiles aangebracht:
 - **i3 (`i3/config`)**: 
-  - Bevat `exec_always --no-startup-id ~/.fehbg` om de laatst ingestelde wallpaper te herstellen (feh overschrijft dit bestand automatisch).
+  - Standaard `$mod` is `Mod1` (Alt), dynamisch te wisselen met `Mod4` (Super/Win) via `scripts/toggle-modkey.sh`.
+  - CapsLock en Escape zijn omgewisseld via `setxkbmap -option caps:swapescape`.
+  - Bevat `exec_always --no-startup-id ~/.fehbg` om de laatst ingestelde wallpaper te herstellen.
   - Verwijzing naar `~/.cache/theme/i3.conf` voor dynamische vensterranden.
-  - Custom keybindings: `$mod+Shift+w` voor de AI-theme generator (aangepast om een conflict met de tabbed layout op `$mod+w` te voorkomen), `$mod+t` voor de manual theme-selector.
+  - Custom keybindings: `$mod+Shift+w` voor de AI-theme generator (`scripts/ai-theme.sh`), `$mod+t` voor de handmatige theme-selector (`scripts/theme-selector.sh`).
 - **Qutebrowser (`qutebrowser/config.py`)**: 
-  - Laadt `config.load_autoconfig(False)` en leest de gegenereerde kleuren uit `~/.cache/theme/qutebrowser.py`.
-  - Geforceerde dark mode ingeschakeld via `c.colors.webpage.darkmode.enabled = True`.
-  - Ingebouwde adblocker (host-based) ingeschakeld (pakket `python3-adblock` weggelaten wegens compatibiliteitsproblemen in Debian Trixie).
+  - Laadt `config.load_autoconfig(False)` en leest de gegenereerde kleuren, dark mode (`c.colors.webpage.darkmode.enabled = True`) en ingebouwde adblocker uit `~/.cache/theme/qutebrowser.py`.
+- **Firefox ESR (`~/.mozilla/firefox/rice.default`)**:
+  - `user.js` activeert `toolkit.legacyUserProfileCustomizations.stylesheets` en compact mode.
+  - `chrome/userChrome.css` is een symlink naar `~/.cache/theme/userChrome.css` voor volledige integratie met de Color Engine.
 - **Thunar / GTK3**:
   - `~/.config/gtk-3.0/settings.ini` forceert de dark-theme basis.
   - `~/.config/gtk-3.0/gtk.css` is een symlink naar `~/.cache/theme/gtk.css`, waardoor Thunar kleuren krijgt die gematcht zijn met het actieve thema.
+- **Neovim (`nvim/init.lua`)**:
+  - Laadt bij het opstarten het dynamisch gegenereerde kleurenschema uit `~/.cache/theme/nvim.lua` (dat vanuit `BG`, `FG` en `ACCENT` automatisch bijpassende schakeringen berekent voor UI, selectie, statusbalk en syntax highlighting).
+  - Bevat een ingebouwde `vim.uv` filesystem-watcher op `~/.cache/theme`, zodat zelfs al openstaande Neovim-vensters live meekleuren bij een thema- of wallpaper-wissel.
+- **Herdr (`herdr/config.toml` & `~/.config/herdr/config.toml`)**:
+  - Omdat `~/.config/herdr/` live sockets en logs bevat, wordt alleen `~/.config/herdr/config.toml` gelinkt naar `~/.cache/theme/herdr.toml`.
+  - Via `[theme.custom]` en `herdr server reload-config` kleurt een draaiende Herdr-sessie direct live mee met de Color Engine.
 - **Rofi, Kitty & Polybar**: Aangepast met respectievelijk `@import`, `include` en `include-file` statements die direct naar de `~/.cache/theme/` bestanden wijzen.
 
 ### 5. De Theming / Color Engine Logica
-De scripts vertalen de 16 gegenereerde kleuren van Pywal (of handmatige thema's) naar 3 robuuste hoofdvariabelen:
+De scripts vertalen de 16 gegenereerde kleuren van Pywal (of handmatige thema's in `~/dotfiles/themes/`) naar 3 robuuste hoofdvariabelen:
 - `BG` (Achtergrond, color0)
 - `FG` (Voorgrond/Tekst, color15)
 - `ACCENT` (Primaire accentkleur, color4)
-Deze variabelen worden weggeschreven naar de betreffende cache-bestanden, waarna de interface direct wordt herladen. Voor Qutebrowser wordt IPC (Inter-Process Communication) gebruikt via het commando `qutebrowser ":config-source" &` om de browser op de achtergrond zijn config te laten herladen zonder herstart.
+Het centrale script `scripts/apply-theme.sh` schrijft deze variabelen weg naar alle 9 cache-bestanden (`polybar.ini`, `kitty.conf`, `i3.conf`, `rofi.rasi`, `qutebrowser.py`, `gtk.css`, `userChrome.css`, `nvim.lua`, `herdr.toml`) en herlaadt vervolgens automatisch Polybar, i3, Herdr (`herdr server reload-config`) en Qutebrowser (via IPC `qutebrowser ":config-source" &`). Openstaande Neovim-sessies herladen zichzelf automatisch via hun filesystem-watcher.
 
-### 6. Overzicht van de Master Scripts
-- **`setup.sh` (Master Bootstrapper)**: Installeert alle bovengenoemde pakketten, configureert de Pywal venv, legt symlinks, én genereert een 'Bootstrap Thema' (Dracula-gebaseerd) in de cache-map, zodat i3/Rofi niet crashen tijdens de eerste opstart.
-- **`ai-theme.sh`**: Roept Rofi aan om een wallpaper in `~/Pictures/Wallpapers/` te selecteren, gebruikt `feh` om deze in te stellen, `wal` om kleuren te genereren, update de cache-bestanden en herstart de WM/apps.
-- **`theme-selector.sh`**: Een handmatige versie om via Rofi vaste thema's te kiezen, onafhankelijk van de wallpaper.
+### 6. Overzicht van de Scripts
+- **`setup.sh` (Master Bootstrapper)**: Installeert alle pakketten, AppImages en CLI-tools, configureert de Pywal venv, legt symlinks en roept `scripts/apply-theme.sh` aan met `--no-reload` voor het Dracula bootstrap-thema.
+- **`scripts/apply-theme.sh`**: De centrale Color Engine die op basis van `<BG> <FG> <ACCENT>` alle themabestanden in `~/.cache/theme/` genereert en de desktop live herlaadt.
+- **`scripts/ai-theme.sh`**: Roept Rofi aan om een wallpaper in `~/dotfiles/wallpapers/` te selecteren, gebruikt `feh` om deze in te stellen, `wal` om kleuren te genereren en geeft deze door aan `apply-theme.sh`.
+- **`scripts/theme-selector.sh`**: Laat via Rofi een vast thema uit `~/dotfiles/themes/` kiezen (`dracula.theme`, `tokyonight.theme`) en geeft de kleuren door aan `apply-theme.sh`.
+- **`scripts/toggle-modkey.sh`**: Wisselt de `$mod`-toets in `i3/config` tussen `Mod1` (Alt) en `Mod4` (Windows-toets) en herlaadt i3.
 
 ### 7. Huidige Status
-Het systeem is succesvol getest, volledig operationeel, en push-klaar op GitHub. De basis is 100% autonoom installeerbaar. Bitwarden integratie via NPM is voorlopig buiten beschouwing gelaten om de core bloat-free te houden.
+Het systeem is opgeschoond, vrij van code-duplicatie en `.bak`-bestanden, volledig getest en push-klaar voor GitHub.
