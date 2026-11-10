@@ -46,23 +46,24 @@ Om de dynamische Color Engine te laten werken, zijn de volgende unieke wijziging
 - **Firefox ESR (`~/.mozilla/firefox/rice.default`)**:
   - `user.js` activeert `toolkit.legacyUserProfileCustomizations.stylesheets` en compact mode.
   - `chrome/userChrome.css` is een symlink naar `~/.cache/theme/userChrome.css` voor volledige integratie met de Color Engine.
-- **Thunar / GTK3**:
-  - `~/.config/gtk-3.0/settings.ini` forceert de dark-theme basis.
-  - `~/.config/gtk-3.0/gtk.css` is een symlink naar `~/.cache/theme/gtk.css`, waardoor Thunar kleuren krijgt die gematcht zijn met het actieve thema.
+- **Thunar / GTK3 & Dynamische Folder Iconen**:
+  - `~/.config/gtk-3.0/settings.ini` forceert de dark-theme basis (`gtk-application-prefer-dark-theme=1`) en stelt het dynamische icoon-thema in (`gtk-icon-theme-name=ColorEngine`).
+  - `~/.config/gtk-3.0/gtk.css` is een symlink naar `~/.cache/theme/gtk.css`, waardoor Thunar en de zijbalk-icoontjes kleuren krijgen die gematcht zijn met het actieve thema.
+  - `~/.local/share/icons/ColorEngine` wordt door `scripts/apply-theme.sh` dynamisch gegenereerd: het erft alle standaard systeemiconen van `Adwaita`, maar vervangt de blauwtinten in alle SVG-mapiconen (`folder*.svg`, `user-home.svg`, `user-desktop.svg`, `user-bookmarks.svg`, `folder-open.svg`) door de berekende thematinten (`FOLDER_BACK`, `ACCENT_DIM`, `ACCENT`, `FOLDER_SHINE`, `ACCENT_SOFT`) en ververst de GTK icon-cache met `gtk-update-icon-cache`.
 - **Neovim (`nvim/init.lua`)**:
   - Laadt bij het opstarten het dynamisch gegenereerde kleurenschema uit `~/.cache/theme/nvim.lua` (dat vanuit `BG`, `FG` en `ACCENT` automatisch bijpassende schakeringen berekent voor UI, selectie, statusbalk en syntax highlighting).
   - Bevat een ingebouwde `vim.uv` filesystem-watcher op `~/.cache/theme`, zodat zelfs al openstaande Neovim-vensters live meekleuren bij een thema- of wallpaper-wissel.
 - **Herdr (`herdr/config.toml` & `~/.config/herdr/config.toml`)**:
   - Omdat `~/.config/herdr/` live sockets en logs bevat, wordt alleen `~/.config/herdr/config.toml` gelinkt naar `~/.cache/theme/herdr.toml`.
   - Via `[theme.custom]` en `herdr server reload-config` kleurt een draaiende Herdr-sessie direct live mee met de Color Engine.
-- **Rofi, Kitty & Polybar**: Aangepast met respectievelijk `@import`, `include` en `include-file` statements die direct naar de `~/.cache/theme/` bestanden wijzen.
+- **Rofi, Kitty & Polybar**: Aangepast met respectievelijk `@import`, `include` en `include-file` statements die direct naar de `~/.cache/theme/` bestanden wijzen. Kitty (`kitty/kitty.conf`) heeft daarnaast JetBrainsMono Nerd Font, window-padding, een volledig 16-kleuren ANSI-palet en live-reload via `SIGUSR1`.
 
 ### 5. De Theming / Color Engine Logica
 De scripts vertalen de 16 gegenereerde kleuren van Pywal (of handmatige thema's in `~/dotfiles/themes/`) naar 3 robuuste hoofdvariabelen:
 - `BG` (Achtergrond, color0)
 - `FG` (Voorgrond/Tekst, color15)
 - `ACCENT` (Primaire accentkleur, color4)
-Het centrale script `scripts/apply-theme.sh` schrijft deze variabelen weg naar alle 9 cache-bestanden (`polybar.ini`, `kitty.conf`, `i3.conf`, `rofi.rasi`, `qutebrowser.py`, `gtk.css`, `userChrome.css`, `nvim.lua`, `herdr.toml`) en herlaadt vervolgens automatisch Polybar, i3, Herdr (`herdr server reload-config`) en Qutebrowser (via IPC `qutebrowser ":config-source" &`). Openstaande Neovim-sessies herladen zichzelf automatisch via hun filesystem-watcher.
+Het centrale script `scripts/apply-theme.sh` berekent in pure Bash vanuit deze 3 kleuren automatisch een uitgebreid palet van afgeleide tinten (`BG_ALT`, `BG_VISUAL`, `FG_MUTED`, `ACCENT_SOFT`, `ACCENT_DIM` en harmonische ANSI-kleuren `ANSI_RED`, `ANSI_GREEN`, `ANSI_YELLOW`, `ANSI_CYAN`), schrijft deze weg naar alle 9 cache-bestanden (`polybar.ini`, `kitty.conf`, `i3.conf`, `rofi.rasi`, `qutebrowser.py`, `gtk.css`, `userChrome.css`, `nvim.lua`, `herdr.toml`) en herlaadt vervolgens automatisch Kitty (`pkill -USR1 -x kitty`), Polybar, i3, Herdr (`herdr server reload-config`) en Qutebrowser (via IPC `qutebrowser ":config-source" &`). Openstaande Neovim-sessies herladen zichzelf automatisch via hun filesystem-watcher.
 
 ### 6. Overzicht van de Scripts
 - **`setup.sh` (Master Bootstrapper)**: Installeert alle pakketten, AppImages en CLI-tools, configureert de Pywal venv, legt symlinks en roept `scripts/apply-theme.sh` aan met `--no-reload` voor het Dracula bootstrap-thema.

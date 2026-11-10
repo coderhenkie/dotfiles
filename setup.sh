@@ -214,17 +214,8 @@ BG="#282a36"
 FG="#f8f8f2"
 ACCENT="#bd93f9"
 
-# Genereer alle themabestanden via de centrale Color Engine (zonder live reload)
+# Genereer alle themabestanden en het ColorEngine icon-theme via de centrale Color Engine (zonder live reload)
 bash "$DOTFILES_DIR/scripts/apply-theme.sh" "$BG" "$FG" "$ACCENT" --no-reload
-
-# GTK3 (Thunar & GUI apps) dark-theme basis en symlink
-mkdir -p "$HOME/.config/gtk-3.0"
-cat <<EOF > "$HOME/.config/gtk-3.0/settings.ini"
-[Settings]
-gtk-application-prefer-dark-theme=1
-EOF
-
-ln -sf "$CACHE_DIR/gtk.css" "$HOME/.config/gtk-3.0/gtk.css"
 
 # FIREFOX RICE symlink (userChrome.css)
 ln -sf "$CACHE_DIR/userChrome.css" "$FF_DIR/$FF_PROFILE/chrome/userChrome.css"
