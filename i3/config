@@ -166,3 +166,9 @@ exec_always --no-startup-id ~/.fehbg
 
 # Start Picom voor schaduwen en transparantie
 exec_always --no-startup-id picom --config ~/.config/picom/picom.conf -b
+
+exec_always --no-startup-id setxkbmap -option caps:swapescape
+
+exec --no-startup-id xrdb -merge ~/.Xresources
+
+

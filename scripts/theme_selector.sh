@@ -15,28 +15,33 @@ fi
 # 2. Laad de 3 kleurcodes ($bg, $fg, $accent) in het geheugen
 source "$THEME_DIR/$THEME_NAME"
 
+# FIX: Map kleine letters naar de verwachte hoofdletters voor de generatie
+BG=$bg
+FG=$fg
+ACCENT=$accent
+
 # 3. Genereer het bestand voor Polybar
 cat <<EOF > "$CACHE_DIR/polybar.ini"
 [colors]
-background = $bg
-foreground = $fg
-primary = $accent
+background = $BG
+foreground = $FG
+primary = $ACCENT
 EOF
 
 # 4. Genereer het bestand voor Kitty
 cat <<EOF > "$CACHE_DIR/kitty.conf"
-background $bg
-foreground $fg
-cursor $accent
-selection_background $accent
-color2 $accent
+background $BG
+foreground $FG
+cursor $ACCENT
+selection_background $ACCENT
+color2 $ACCENT
 EOF
 
 # 5. Genereer het bestand voor i3 (Randkleuren)
 cat <<EOF > "$CACHE_DIR/i3.conf"
-set \$bg $bg
-set \$fg $fg
-set \$accent $accent
+set \$bg $BG
+set \$fg $FG
+set \$accent $ACCENT
 
 # Format: focused <border> <background> <text> <indicator> <child_border>
 client.focused \$accent \$accent \$bg \$accent \$accent
@@ -45,9 +50,9 @@ EOF
 # 5.5 Genereer het bestand voor Rofi
 cat <<EOF > "$CACHE_DIR/rofi.rasi"
 * {
-bg: $bg;
-fg: $fg;
-accent: $accent;
+bg: $BG;
+fg: $FG;
+accent: $ACCENT;
 background-color: @bg;
 text-color: @fg;
 }
@@ -81,5 +86,54 @@ if pgrep -x "qutebrowser" > /dev/null; then
     qutebrowser ":config-source" &
 fi
 
+# 7.6 Genereer de Thunar / GTK3 CSS
+cat <<EOF > "$CACHE_DIR/gtk.css"
+@define-color theme_bg_color $BG;
+@define-color theme_fg_color $FG;
+@define-color theme_base_color $BG;
+@define-color theme_text_color $FG;
+@define-color theme_selected_bg_color $ACCENT;
+@define-color theme_selected_fg_color $BG;
+@define-color theme_unfocused_bg_color $BG;
+@define-color theme_unfocused_text_color $FG;
+EOF
+
+# FIREFOX RICE
+cat <<EOF > "$CACHE_DIR/userChrome.css"
+/* Firefox Color Engine Rice */
+:root {
+  --bg-color: $BG !important;
+  --fg-color: $FG !important;
+  --accent-color: $ACCENT !important;
+  --toolbar-bgcolor: $BG !important;
+  --toolbar-color: $FG !important;
+  --lwt-accent-color: $BG !important;
+  --lwt-text-color: $FG !important;
+  --tab-selected-bgcolor: $ACCENT !important;
+  --tab-selected-textcolor: $BG !important;
+}
+
+#navigator-toolbox {
+    background-color: var(--bg-color) !important;
+    border: none !important;
+}
+
+#urlbar-background {
+    background-color: var(--bg-color) !important;
+    border: 1px solid var(--accent-color) !important;
+}
+
+.tab-background {
+    background-color: var(--bg-color) !important;
+    color: var(--fg-color) !important;
+}
+
+.tab-background[selected="true"] {
+    background-color: var(--accent-color) !important;
+}
+EOF
+
 # 6. Herstart de interface om kleuren toe te passen
+bash ~/.config/polybar/launch.sh &
+sleep 0.25
 i3-msg restart
