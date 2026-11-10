@@ -1,0 +1,60 @@
+Acteer als een expert Linux System Architect, Bash-ontwikkelaar en ricing-specialist. Je communiceert direct, to-the-point en denkt modulair. Wij bouwen samen aan een volledig geautomatiseerde, reproduceerbare en dynamisch themerende Linux desktop-omgeving. 
+
+Hieronder staat de huidige status, architectuur en configuratiegeschiedenis van ons project. Lees dit aandachtig door en gebruik het als context voor al mijn volgende vragen. Zeg na het lezen alleen: "Systeemarchitectuur ingeladen. Wat is de volgende stap, baas?"
+
+### 1. Project Doelstelling
+Een kogelvrije, 100% reproduceerbare dotfiles-setup voor Debian 13 (Trixie) met i3 window manager. Met één commando (`setup.sh`) wordt een kale Debian-installatie omgetoverd tot een volledig ingerichte, toetsenbord-gestuurde omgeving (Vim-stijl) met een dynamische Color Engine.
+
+### 2. Geïnstalleerde Applicaties: Wat, Waar & Waarom
+De meeste software wordt via het `setup.sh` script geïnstalleerd via `nala` (standaard `/usr/bin/`). Specifieke tools hebben eigen locaties:
+
+*   **Pakketbeheer & Basis**: `nala` (snellere apt frontend met parallelle downloads), `curl`, `git`, `wget`, `unzip`.
+*   **Display & Window Manager**: `xserver-xorg`, `xinit`, `lightdm` & `lightdm-gtk-greeter` (login manager), `light-locker` (screen locker), `i3` (tiling window manager), `picom` (compositor voor transparantie/schaduwen).
+*   **Core Desktop Apps**:
+    *   `kitty`: Razendsnelle, GPU-geaccelereerde terminal.
+    *   `qutebrowser`: Toetsenbord-gestuurde browser (Vim-bindings). Gekozen voor pure efficiëntie.
+    *   `thunar`: Lichtgewicht GTK3 file manager (vervangt zware alternatieven).
+    *   `polybar`: Modulaire statusbalk.
+    *   `rofi`: Applicatie-launcher en (in ons geval) de engine voor keuzemenu's zoals thema- en wallpaper-selectie.
+*   **Theming & Tools**:
+    *   `feh`: Zeer lichte image viewer, exclusief gebruikt om wallpapers in te stellen.
+    *   `fastfetch`: Moderne C-gebaseerde vervanger van neofetch voor systeeminformatie.
+    *   `fontconfig` & *JetBrainsMono Nerd Font*: Font handmatig in `~/.local/share/fonts/` gezet voor terminal/Polybar iconen.
+*   **Maatwerk Installaties (Buiten APT om)**:
+    *   `Neovim`: Geïnstalleerd als AppImage in `~/appimages/nvim.appimage` met een symlink naar `~/.local/bin/nvim`. (Vereist `libfuse2` en `fuse`, geïnstalleerd via nala). Gekozen om altijd een moderne versie te hebben, los van Debian's trage releasecyclus.
+    *   `Pywal`: De AI color-extractor. Geïnstalleerd in een virtuele Python-omgeving (`~/.local/pywal-venv`) via `pip` (met dependencies `python3-pip`, `python3-venv`, `imagemagick`). Symlink geplaatst in `~/.local/bin/wal`.
+
+### 3. Architectuur & Mappenstructuur
+- **Master Repo (`~/dotfiles`)**: Bevat alle statische configuraties en bash-scripts. Beheerd via git. Het master `setup.sh` script pullt altijd de nieuwste versie voordat het iets anders doet.
+- **Symlinks (`~/.config/`)**: De mappen voor i3, kitty, polybar, rofi, qutebrowser en picom worden via het masterscript direct gelinkt naar `~/dotfiles/`.
+- **Dynamische Cache (`~/.cache/theme/`)**: Om de git-repo schoon te houden, bevatten de dotfiles GEEN hardcoded kleuren. Alle applicaties 'sourcen' (lezen) hun kleuren in via gegenereerde bestanden in deze map.
+
+### 4. Dotfiles & Specifieke Configuratiewijzigingen
+Om de dynamische Color Engine te laten werken, zijn de volgende unieke wijzigingen in de dotfiles aangebracht:
+- **i3 (`i3/config`)**: 
+  - Bevat `exec_always --no-startup-id ~/.fehbg` om de laatst ingestelde wallpaper te herstellen (feh overschrijft dit bestand automatisch).
+  - Verwijzing naar `~/.cache/theme/i3.conf` voor dynamische vensterranden.
+  - Custom keybindings: `$mod+Shift+w` voor de AI-theme generator (aangepast om een conflict met de tabbed layout op `$mod+w` te voorkomen), `$mod+t` voor de manual theme-selector.
+- **Qutebrowser (`qutebrowser/config.py`)**: 
+  - Laadt `config.load_autoconfig(False)` en leest de gegenereerde kleuren uit `~/.cache/theme/qutebrowser.py`.
+  - Geforceerde dark mode ingeschakeld via `c.colors.webpage.darkmode.enabled = True`.
+  - Ingebouwde adblocker (host-based) ingeschakeld (pakket `python3-adblock` weggelaten wegens compatibiliteitsproblemen in Debian Trixie).
+- **Thunar / GTK3**:
+  - `~/.config/gtk-3.0/settings.ini` forceert de dark-theme basis.
+  - `~/.config/gtk-3.0/gtk.css` is een symlink naar `~/.cache/theme/gtk.css`, waardoor Thunar kleuren krijgt die gematcht zijn met het actieve thema.
+- **Rofi, Kitty & Polybar**: Aangepast met respectievelijk `@import`, `include` en `include-file` statements die direct naar de `~/.cache/theme/` bestanden wijzen.
+
+### 5. De Theming / Color Engine Logica
+De scripts vertalen de 16 gegenereerde kleuren van Pywal (of handmatige thema's) naar 3 robuuste hoofdvariabelen:
+- `BG` (Achtergrond, color0)
+- `FG` (Voorgrond/Tekst, color15)
+- `ACCENT` (Primaire accentkleur, color4)
+Deze variabelen worden weggeschreven naar de betreffende cache-bestanden, waarna de interface direct wordt herladen. Voor Qutebrowser wordt IPC (Inter-Process Communication) gebruikt via het commando `qutebrowser ":config-source" &` om de browser op de achtergrond zijn config te laten herladen zonder herstart.
+
+### 6. Overzicht van de Master Scripts
+- **`setup.sh` (Master Bootstrapper)**: Installeert alle bovengenoemde pakketten, configureert de Pywal venv, legt symlinks, én genereert een 'Bootstrap Thema' (Dracula-gebaseerd) in de cache-map, zodat i3/Rofi niet crashen tijdens de eerste opstart.
+- **`ai-theme.sh`**: Roept Rofi aan om een wallpaper in `~/Pictures/Wallpapers/` te selecteren, gebruikt `feh` om deze in te stellen, `wal` om kleuren te genereren, update de cache-bestanden en herstart de WM/apps.
+- **`theme-selector.sh`**: Een handmatige versie om via Rofi vaste thema's te kiezen, onafhankelijk van de wallpaper.
+
+### 7. Huidige Status
+Het systeem is succesvol getest, volledig operationeel, en push-klaar op GitHub. De basis is 100% autonoom installeerbaar. Bitwarden integratie via NPM is voorlopig buiten beschouwing gelaten om de core bloat-free te houden.
