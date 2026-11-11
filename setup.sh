@@ -51,11 +51,11 @@ echo "==> Installing Xorg and LightDM..."
 sudo nala install -y xserver-xorg xinit lightdm lightdm-gtk-greeter light-locker
 sudo systemctl enable lightdm
 
-echo "==> Installing applications & CLI tools (including Firefox ESR, JQ, and NPM)..."
-sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc qutebrowser fastfetch thunar btop firefox-esr jq npm
+echo "==> Installing applications & CLI tools (including JQ and NPM)..."
+sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc fastfetch thunar btop jq npm
 
 # ==========================================
-# 4. AppImages: Neovim & Obsidian
+# 4. AppImages: Neovim, Obsidian & Thorium Browser
 # ==========================================
 echo "==> Downloading and configuring AppImages..."
 APPIMAGE_DIR="$HOME/appimages"
@@ -109,6 +109,100 @@ else
     echo "[OK] Obsidian is already installed."
 fi
 
+# --- THORIUM BROWSER (LATEST AVX2 / SSE4 APPIMAGE + EXTENSIONS + GTK THEME) ---
+if [ ! -f "$APPIMAGE_DIR/thorium.appimage" ]; then
+    echo " -> Fetching latest Thorium Browser release via GitHub API..."
+    if grep -q "avx2" /proc/cpuinfo 2>/dev/null; then
+        THORIUM_ISA="AVX2"
+    else
+        THORIUM_ISA="SSE4"
+    fi
+
+    THORIUM_URL=$(curl -s "https://api.github.com/repos/Alex313031/Thorium/releases?per_page=15" | jq -r '[.[] | select((.assets | length) > 0)][0].assets[] | .browser_download_url' | grep '\.AppImage$' | grep "_${THORIUM_ISA}\." | head -n 1)
+
+    if [ -n "$THORIUM_URL" ]; then
+        curl -L -o "$APPIMAGE_DIR/thorium.appimage" "$THORIUM_URL"
+        chmod u+x "$APPIMAGE_DIR/thorium.appimage"
+        ln -sf "$APPIMAGE_DIR/thorium.appimage" "$LOCAL_BIN/thorium"
+        echo "[OK] Thorium Browser ($THORIUM_ISA) installed."
+    else
+        echo "[!] Could not find Thorium Browser download URL."
+    fi
+else
+    echo "[OK] Thorium Browser is already installed."
+    ln -sf "$APPIMAGE_DIR/thorium.appimage" "$LOCAL_BIN/thorium"
+fi
+
+# Create the .desktop entry for Thorium in Rofi
+mkdir -p "$HOME/.local/share/applications"
+cat <<EOF > "$HOME/.local/share/applications/thorium.desktop"
+[Desktop Entry]
+Name=Thorium Browser
+GenericName=Web Browser
+Exec=$HOME/.local/bin/thorium --no-sandbox --no-default-browser-check %U
+Terminal=false
+Type=Application
+Icon=thorium
+StartupWMClass=thorium
+Comment=Thorium High-Performance Web Browser
+Categories=Network;WebBrowser;
+EOF
+
+# Configure automatic installation of latest Chrome Web Store extensions for Thorium:
+# 1. Thorium Material Dark Theme (dahfohiipmpcppjbablgfoggbogdmddp)
+# 2. Bitwarden Password Manager  (nngceckbapebfimnlniiiahkandclblb)
+# 3. Ghostery Tracker/Ad Blocker (mlomiejdfkolichcflejclcbmpeaniij)
+# 4. Vimium Keyboard Navigation  (dbepggeogbaibhgnhhndojpepiihcmeb)
+THORIUM_EXT_IDS=(
+    "dahfohiipmpcppjbablgfoggbogdmddp"
+    "nngceckbapebfimnlniiiahkandclblb"
+    "mlomiejdfkolichcflejclcbmpeaniij"
+    "dbepggeogbaibhgnhhndojpepiihcmeb"
+)
+
+sudo mkdir -p /etc/chromium/policies/managed /etc/opt/chrome/policies/managed
+sudo tee /etc/chromium/policies/managed/thorium_extensions.json /etc/opt/chrome/policies/managed/thorium_extensions.json >/dev/null <<EOF
+{
+  "ExtensionInstallForcelist": [
+    "dahfohiipmpcppjbablgfoggbogdmddp;https://clients2.google.com/service/update2/crx",
+    "nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx",
+    "mlomiejdfkolichcflejclcbmpeaniij;https://clients2.google.com/service/update2/crx",
+    "dbepggeogbaibhgnhhndojpepiihcmeb;https://clients2.google.com/service/update2/crx"
+  ]
+}
+EOF
+
+mkdir -p "$HOME/.config/thorium/External Extensions"
+for ext_id in "${THORIUM_EXT_IDS[@]}"; do
+    cat <<EOF > "$HOME/.config/thorium/External Extensions/${ext_id}.json"
+{
+  "external_update_url": "https://clients2.google.com/service/update2/crx"
+}
+EOF
+done
+
+# Bootstrap Thorium Default Preferences to use GTK+ theme colors from the Color Engine
+mkdir -p "$HOME/.config/thorium/Default"
+if [ ! -f "$HOME/.config/thorium/Default/Preferences" ]; then
+    cat <<EOF > "$HOME/.config/thorium/Default/Preferences"
+{
+  "browser": {
+    "custom_chrome_frame": true,
+    "theme": {
+      "color_scheme2": 2
+    }
+  },
+  "extensions": {
+    "theme": {
+      "id": "use_system",
+      "system_theme": 1,
+      "use_system": true
+    }
+  }
+}
+EOF
+fi
+
 # ==========================================
 # 4.5 Extra CLI Tools: Herdr & Antigravity CLI
 # ==========================================
@@ -160,13 +254,13 @@ python3 -m venv "$HOME/.local/pywal-venv"
 ln -sf "$HOME/.local/pywal-venv/bin/wal" "$LOCAL_BIN/wal"
 
 # ==========================================
-# 7. Dotfiles & Firefox Setup
+# 7. Dotfiles Symlinks Setup
 # ==========================================
 echo "==> Creating symlinks for configuration directories..."
 CONFIG_DIR="$HOME/.config"
 mkdir -p "$CONFIG_DIR"
 
-APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "qutebrowser" "btop")
+APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "btop")
 
 for app in "${APPS[@]}"; do
     TARGET_DIR="$CONFIG_DIR/$app"
@@ -187,37 +281,6 @@ if [ ! -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && [ -f "$DOTFILES_DIR/i3/hotkeys.de
     echo "[OK] Initialized i3/hotkeys.conf from hotkeys.default."
 fi
 
-echo "==> Checking Firefox ricing profile..."
-FF_DIR="$HOME/.mozilla/firefox"
-FF_PROFILE="rice.default"
-
-if [ ! -d "$FF_DIR/$FF_PROFILE" ]; then
-    echo " -> Creating new Firefox rice profile..."
-    mkdir -p "$FF_DIR/$FF_PROFILE/chrome"
-
-    cat <<EOF > "$FF_DIR/profiles.ini"
-[Profile0]
-Name=default
-IsRelative=1
-Path=$FF_PROFILE
-Default=1
-
-[General]
-StartWithLastProfile=1
-Version=2
-EOF
-
-    cat <<EOF > "$FF_DIR/$FF_PROFILE/user.js"
-user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
-user_pref("browser.tabs.inTitlebar", 0);
-user_pref("browser.compactmode.show", true);
-user_pref("browser.uidensity", 1);
-EOF
-else
-    echo "[OK] Firefox rice profile already exists. (Leaving existing profile untouched!)"
-    mkdir -p "$FF_DIR/$FF_PROFILE/chrome"
-fi
-
 # ==========================================
 # 8. Set Executable Permissions
 # ==========================================
@@ -230,7 +293,7 @@ fi
 chmod +x "$DOTFILES_DIR/scripts/"*.sh
 
 # ==========================================
-# 9. Color Engine Bootstrap & Live Reload (Including Firefox, Neovim & Herdr)
+# 9. Color Engine Bootstrap & Live Reload (Including Thorium, Neovim, Herdr & btop)
 # ==========================================
 echo "==> Generating default bootstrap theme in ~/.cache/theme..."
 CACHE_DIR="$HOME/.cache/theme"
@@ -239,9 +302,6 @@ mkdir -p "$CACHE_DIR"
 BG="#282a36"
 FG="#f8f8f2"
 ACCENT="#bd93f9"
-
-# FIREFOX RICE symlink (userChrome.css)
-ln -sf "$CACHE_DIR/userChrome.css" "$FF_DIR/$FF_PROFILE/chrome/userChrome.css"
 
 # HERDR config symlink (only link config.toml so live sockets/logs stay out of git)
 mkdir -p "$HOME/.config/herdr"
