@@ -463,9 +463,13 @@ if [ "$MODE" != "--no-reload" ]; then
         "$HOME/.local/bin/herdr" server reload-config >/dev/null 2>&1 || true
     fi
 
+    export DISPLAY="${DISPLAY:-:0}"
+    if [ -z "${I3SOCK:-}" ]; then
+        I3SOCK=$(ls "/run/user/$(id -u)/i3/"ipc-socket.* 2>/dev/null | head -n 1 || true)
+        [ -n "$I3SOCK" ] && export I3SOCK
+    fi
+
     if i3-msg -t get_version >/dev/null 2>&1; then
-        bash ~/.config/polybar/launch.sh &
-        sleep 0.25
         i3-msg restart >/dev/null 2>&1 || true
     fi
 fi

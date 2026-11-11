@@ -26,6 +26,19 @@ prompt {
     padding: 0 10px 0 0;
 }
 
+message {
+    padding: 8px;
+    background-color: @bg-alt;
+    border: 1px;
+    border-color: @accent;
+    border-radius: 4px;
+}
+
+textbox {
+    background-color: inherit;
+    text-color: @fg;
+}
+
 listview {
     lines: 6;
     spacing: 5px;
