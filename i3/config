@@ -1,10 +1,10 @@
 # Load the dynamic theme from the Color Engine
 include ~/.cache/theme/i3.conf
 
-# Shortcut to open the Theme Selector (Mod + t)
+# Shortcut to open the Theme Selector (Mod + Shift + w)
 bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/scripts/theme-selector.sh
 
-# Shortcut for the AI Wallpaper Theme (Mod + Shift + w)
+# Shortcut for the AI Wallpaper Theme (Mod + t)
 bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
 
 # Shortcut to open the Hotkey Menu (Mod + m)

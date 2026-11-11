@@ -15,7 +15,7 @@ Most software is installed via the `setup.sh` script using `nala` (standard `/us
     *   `qutebrowser`: Keyboard-driven browser (Vim bindings), chosen for pure efficiency.
     *   `firefox-esr`: Installed as a full-featured fallback browser with an automatically configured `rice.default` profile and dynamic `userChrome.css`.
     *   `thunar`: Lightweight GTK3 file manager.
-    *   `polybar`: Modular status bar.
+    *   `polybar`: Modular dual status bar (top & bottom).
     *   `rofi`: Application launcher and interactive menu engine for theme selection, wallpaper picking, and live hotkey management.
 *   **Theming & System Tools**:
     *   `feh`: Lightweight image viewer used exclusively to set desktop wallpapers.
@@ -37,11 +37,24 @@ Most software is installed via the `setup.sh` script using `nala` (standard `/us
 To support the dynamic Color Engine and smooth workflow, the following configurations are in place:
 - **i3 (`i3/config`)**:
   - Default `$mod` is `Mod1` (Alt), dynamically switchable with `Mod4` (Super/Win) via `scripts/toggle-modkey.sh` or directly inside the Hotkey Menu.
+  - Window borders (`3px` pixel border) and subtle window gaps (`gaps inner 4`, `gaps outer 1`).
   - CapsLock and Escape are swapped via `setxkbmap -option caps:swapescape`.
   - Disables X11 screen blanking and DPMS monitor power-off (`xset s off -dpms`) and avoids duplicate `xss-lock`/`i3lock` daemons to prevent VM lock freezes.
   - Restores the last selected wallpaper via `exec_always --no-startup-id ~/.fehbg`.
   - Includes `~/.cache/theme/i3.conf` for dynamic window border colors.
-  - Custom keybindings: `$mod+Shift+w` for the AI wallpaper theme generator (`scripts/ai-theme.sh`), `$mod+t` for the preset theme selector (`scripts/theme-selector.sh`), and `$mod+m` for the interactive Rofi Hotkey Menu (`scripts/hotkey-menu.sh`).
+  - Custom keybindings: `$mod+t` for the AI wallpaper theme generator (`scripts/ai-theme.sh`), `$mod+Shift+w` for the preset theme selector (`scripts/theme-selector.sh`), and `$mod+m` for the interactive Rofi Hotkey Menu (`scripts/hotkey-menu.sh`).
+- **Picom (`picom/picom.conf`)**:
+  - Uses the fast `xrender` backend with `vsync = true`, rounded corners (`corner-radius = 4`, excluding docks and Polybar), and window shadows (excluding Polybar).
+  - Opacity settings: `inactive-opacity = 0.95`, `active-opacity = 1.0`, and per-application `opacity-rule` keeping Rofi and Polybar at `100%`, Kitty and Thunar at `85%`, and Firefox (`firefox`, `firefox-esr`, `Navigator`) at `95%`.
+- **Polybar (`polybar/config.ini` & `polybar/launch.sh`)**:
+  - Dual-bar layout (`bar/top` and `bar/bottom`) launched cleanly via `setsid` in `polybar/launch.sh`, sourcing colors from `~/.cache/theme/polybar.ini`.
+  - **Top Bar (`bar/top`)**: Displays i3 workspaces (with `5px` padding and `1px` margin spacing), active window title (`xwindow`), date/time, and system tray.
+  - **Bottom Bar (`bar/bottom`)**: Live system telemetry modules:
+    - `filesystem`: Queries real mounted filesystems every 5s via `df -h --total` (excluding `tmpfs`, `devtmpfs`, `efivarfs`, `squashfs`, `overlay`), displaying `%used (used/total)`.
+    - `network`: Universal local IPv4 detection every 3s via `ip -4 route get 1.1.1.1` (with `hostname -I` fallback), supporting both Wi-Fi and wired Ethernet interfaces on baremetal and VMs.
+    - `cpu` & `memory`: Live CPU load and RAM usage (`%percentage_used% (%gb_used%)`).
+    - `gpu` (`scripts/polybar-gpu.sh`): Multi-vendor GPU load monitor supporting NVIDIA (`nvidia-smi`), AMD (`gpu_busy_percent`), and Intel (`i915`/`xe` via RC6 idle residency delta and frequency scaling), using `systemd-detect-virt --vm` so `0% (VM)` is only shown inside virtual machines and `0%` on idle baremetal.
+    - `pulseaudio` & `battery`: Volume status and dynamic battery capacity/status (falling back to `100% (AC)` on desktop/VM).
 - **Qutebrowser (`qutebrowser/config.py`)**:
   - Calls `config.load_autoconfig(False)` and loads generated colors, dark mode (`c.colors.webpage.darkmode.enabled = True`), and built-in adblocking from `~/.cache/theme/qutebrowser.py`.
 - **Firefox ESR (`~/.mozilla/firefox/rice.default`)**:
@@ -57,10 +70,10 @@ To support the dynamic Color Engine and smooth workflow, the following configura
 - **Herdr (`herdr/config.toml` & `~/.config/herdr/config.toml`)**:
   - Because `~/.config/herdr/` stores live sockets and logs, only `~/.config/herdr/config.toml` is symlinked to `~/.cache/theme/herdr.toml`.
   - Uses `[theme.custom]` and `herdr server reload-config` so running Herdr sessions update their colors live.
-- **btop (`btop/btop.conf`)**:
+- **btop (`btop/btop.conf` & `btop/.gitignore`)**:
   - Configured with `vim_keys = True` and `color_theme = "color_engine"`.
   - `~/.config/btop/themes/color_engine.theme` is symlinked to `~/.cache/theme/btop.theme` (ignored in Git along with `btop.log` via `btop/.gitignore`), and running `btop` instances live-reload via `SIGUSR2`.
-- **Rofi, Kitty & Polybar**: Configured with `@import`, `include`, and `include-file` statements pointing to `~/.cache/theme/`. Rofi (`rofi/theme.rasi`) styles both the list view and message/prompt bars (`message`, `textbox`) using Color Engine variables. Kitty (`kitty/kitty.conf`) uses JetBrainsMono Nerd Font, window padding, a full 16-color ANSI palette, and live reload via `SIGUSR1`.
+- **Rofi & Kitty**: Configured with `@import` and `include` statements pointing to `~/.cache/theme/`. Rofi (`rofi/theme.rasi`) styles both the list view and message/prompt bars (`message`, `textbox`) using Color Engine variables. Kitty (`kitty/kitty.conf`) uses JetBrainsMono Nerd Font, window padding, a full 16-color ANSI palette, and live reload via `SIGUSR1`.
 
 ### 5. Theming / Color Engine Logic
 The scripts translate the 16 colors generated by Pywal (or preset themes in `~/dotfiles/themes/`) into 3 primary base variables:
@@ -70,12 +83,13 @@ The scripts translate the 16 colors generated by Pywal (or preset themes in `~/d
 The central script `scripts/apply-theme.sh` computes an extended palette of derived shades in pure Bash (`BG_ALT`, `BG_VISUAL`, `FG_MUTED`, `ACCENT_SOFT`, `ACCENT_DIM`, and harmonic ANSI colors `ANSI_RED`, `ANSI_GREEN`, `ANSI_YELLOW`, `ANSI_CYAN`), writes all 10 cache files (`polybar.ini`, `kitty.conf`, `i3.conf`, `rofi.rasi`, `qutebrowser.py`, `gtk.css`, `userChrome.css`, `nvim.lua`, `herdr.toml`, `btop.theme`), and live-reloads Kitty (`pkill -USR1 -x kitty`), btop (`pkill -USR2 -x btop`), i3 & Polybar (`i3-msg restart`), Herdr (`herdr server reload-config`), and Qutebrowser (`qutebrowser ":config-source" &`). Open Neovim sessions reload automatically via their filesystem watcher.
 
 ### 6. Overview of Scripts
-- **`setup.sh` (Master Bootstrapper)**: Installs base tools (`nala`, `curl`, `git`), pulls or clones the latest `~/dotfiles` repository, and immediately replaces its own process (`exec bash "$DOTFILES_DIR/setup.sh"`) via the `DOTFILES_SETUP_RELOADED=1` guard so the remaining steps always execute using the newly downloaded `setup.sh`. It then installs all packages, AppImages, and CLI tools, configures the Pywal virtualenv, creates symlinks, and invokes `scripts/apply-theme.sh` with `--no-reload` for the Dracula bootstrap theme.
+- **`setup.sh` (Master Bootstrapper)**: Installs base tools (`nala`, `curl`, `git`), pulls or clones the latest `~/dotfiles` repository, and immediately replaces its own process (`exec bash "$DOTFILES_DIR/setup.sh"`) via the `DOTFILES_SETUP_RELOADED=1` guard so the remaining steps always execute using the newly downloaded `setup.sh`. It then installs all packages, AppImages, and CLI tools, configures the Pywal virtualenv, creates symlinks, and invokes `scripts/apply-theme.sh` for the Dracula bootstrap theme.
 - **`scripts/apply-theme.sh`**: Central Color Engine that generates all theme files in `~/.cache/theme/` from `<BG> <FG> <ACCENT>` and live-reloads the desktop.
-- **`scripts/ai-theme.sh`**: Opens Rofi (`$mod+Shift+w`) to pick a wallpaper from `~/dotfiles/wallpapers/`, sets it via `feh`, extracts colors with `wal`, and passes them to `apply-theme.sh`.
-- **`scripts/theme-selector.sh`**: Opens Rofi (`$mod+t`) to pick a preset theme from `~/dotfiles/themes/` (`dracula.theme`, `tokyonight.theme`) and passes its colors to `apply-theme.sh`.
+- **`scripts/ai-theme.sh`**: Opens Rofi (`$mod+t`) to pick a wallpaper from `~/dotfiles/wallpapers/`, sets it via `feh`, extracts colors with `wal`, and passes them to `apply-theme.sh`.
+- **`scripts/theme-selector.sh`**: Opens Rofi (`$mod+Shift+w`) to pick a preset theme from `~/dotfiles/themes/` (`dracula.theme`, `tokyonight.theme`) and passes its colors to `apply-theme.sh`.
 - **`scripts/toggle-modkey.sh`**: Toggles the `$mod` key in `i3/config` between `Mod1` (Alt) and `Mod4` (Super/Win) and reloads i3.
 - **`scripts/hotkey-menu.sh`**: Interactive English Rofi menu (`$mod+m`) displaying a clean 2-column overview (`Key │ Short description`) of all i3 hotkeys. Selecting an action opens a live X11 key-capture popup (`libX11`) where pressing any single key or modifier+key combination immediately rebinds the hotkey (with conflict swap/overwrite prompts, `i3 -C` syntax validation, automatic rollback on error, and live reload; pressing `Esc` always exits the menu).
+- **`scripts/polybar-gpu.sh`**: Multi-vendor GPU utilization helper for the bottom Polybar (`NVIDIA`, `AMD`, and `Intel` via DRM sysfs), with automatic VM vs. baremetal fallback detection.
 
 ### 7. Current Status
 All configuration files, scripts, comments, UI prompts, and documentation across `~/dotfiles` are uniformly written in English, validated, tested, and ready for GitHub.
