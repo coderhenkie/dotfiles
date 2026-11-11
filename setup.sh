@@ -181,6 +181,12 @@ for app in "${APPS[@]}"; do
     fi
 done
 
+# Initialize local i3 hotkeys.conf from hotkeys.default only on first install
+if [ ! -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && [ -f "$DOTFILES_DIR/i3/hotkeys.default" ]; then
+    cp "$DOTFILES_DIR/i3/hotkeys.default" "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Initialized i3/hotkeys.conf from hotkeys.default."
+fi
+
 echo "==> Checking Firefox ricing profile..."
 FF_DIR="$HOME/.mozilla/firefox"
 FF_PROFILE="rice.default"

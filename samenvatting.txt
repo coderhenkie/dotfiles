@@ -35,13 +35,14 @@ Most software is installed via the `setup.sh` script using `nala` (standard `/us
 
 ### 4. Dotfiles & Specific Configuration Details
 To support the dynamic Color Engine and smooth workflow, the following configurations are in place:
-- **i3 (`i3/config`)**:
-  - Default `$mod` is `Mod1` (Alt), dynamically switchable with `Mod4` (Super/Win) via `scripts/toggle-modkey.sh` or directly inside the Hotkey Menu.
+- **i3 (`i3/config`, `i3/hotkeys.default` & `i3/hotkeys.conf`)**:
+  - `i3/config` contains static window manager settings, appearance, and autostart commands, and includes `~/.config/i3/hotkeys.conf` alongside `~/.cache/theme/i3.conf`.
+  - `i3/hotkeys.default` (tracked in Git) stores the default blueprint for `$mod` (`Mod1` Alt), `bindsym` shortcuts, and `mode "resize"`. On first install (`setup.sh` or first launch of `hotkey-menu.sh` / `toggle-modkey.sh`), it is copied once to `i3/hotkeys.conf` if `hotkeys.conf` does not exist yet.
+  - `i3/hotkeys.conf` is ignored by Git via `i3/.gitignore` so each machine (VM vs. baremetal) can customize its own `$mod` key (`Mod1` Alt or `Mod4` Super/Win) and hotkeys without ever causing `git pull` merge conflicts.
   - Window borders (`3px` pixel border) and subtle window gaps (`gaps inner 4`, `gaps outer 1`).
   - CapsLock and Escape are swapped via `setxkbmap -option caps:swapescape`.
   - Disables X11 screen blanking and DPMS monitor power-off (`xset s off -dpms`) and avoids duplicate `xss-lock`/`i3lock` daemons to prevent VM lock freezes.
   - Restores the last selected wallpaper via `exec_always --no-startup-id ~/.fehbg`.
-  - Includes `~/.cache/theme/i3.conf` for dynamic window border colors.
   - Custom keybindings: `$mod+t` for the AI wallpaper theme generator (`scripts/ai-theme.sh`), `$mod+Shift+w` for the preset theme selector (`scripts/theme-selector.sh`), and `$mod+m` for the interactive Rofi Hotkey Menu (`scripts/hotkey-menu.sh`).
 - **Picom (`picom/picom.conf`)**:
   - Uses the fast `xrender` backend with `vsync = true`, rounded corners (`corner-radius = 4`, excluding docks and Polybar), and window shadows (excluding Polybar).
@@ -87,8 +88,8 @@ The central script `scripts/apply-theme.sh` computes an extended palette of deri
 - **`scripts/apply-theme.sh`**: Central Color Engine that generates all theme files in `~/.cache/theme/` from `<BG> <FG> <ACCENT>` and live-reloads the desktop.
 - **`scripts/ai-theme.sh`**: Opens Rofi (`$mod+t`) to pick a wallpaper from `~/dotfiles/wallpapers/`, sets it via `feh`, extracts colors with `wal`, and passes them to `apply-theme.sh`.
 - **`scripts/theme-selector.sh`**: Opens Rofi (`$mod+Shift+w`) to pick a preset theme from `~/dotfiles/themes/` (`dracula.theme`, `tokyonight.theme`) and passes its colors to `apply-theme.sh`.
-- **`scripts/toggle-modkey.sh`**: Toggles the `$mod` key in `i3/config` between `Mod1` (Alt) and `Mod4` (Super/Win) and reloads i3.
-- **`scripts/hotkey-menu.sh`**: Interactive English Rofi menu (`$mod+m`) displaying a clean 2-column overview (`Key │ Short description`) of all i3 hotkeys. Selecting an action opens a live X11 key-capture popup (`libX11`) where pressing any single key or modifier+key combination immediately rebinds the hotkey (with conflict swap/overwrite prompts, `i3 -C` syntax validation, automatic rollback on error, and live reload; pressing `Esc` always exits the menu).
+- **`scripts/toggle-modkey.sh`**: Toggles the `$mod` key in `i3/hotkeys.conf` between `Mod1` (Alt) and `Mod4` (Super/Win) and reloads i3.
+- **`scripts/hotkey-menu.sh`**: Interactive English Rofi menu (`$mod+m`) displaying a clean 2-column overview (`Key │ Short description`) of all i3 hotkeys in `i3/hotkeys.conf`. Selecting an action opens a live X11 key-capture popup (`libX11`) where pressing any single key or modifier+key combination immediately rebinds the hotkey (with conflict swap/overwrite prompts, `i3 -C` syntax validation, automatic rollback on error, and live reload; pressing `Esc` always exits the menu).
 - **`scripts/polybar-gpu.sh`**: Multi-vendor GPU utilization helper for the bottom Polybar (`NVIDIA`, `AMD`, and `Intel` via DRM sysfs), with automatic VM vs. baremetal fallback detection.
 
 ### 7. Current Status
