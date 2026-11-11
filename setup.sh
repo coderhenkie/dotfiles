@@ -30,8 +30,13 @@ if [ "${DOTFILES_SETUP_RELOADED:-0}" != "1" ]; then
     echo "==> Fetching latest dotfiles..."
 
     if [ -d "$DOTFILES_DIR/.git" ]; then
-        echo "==> Dotfiles directory already exists. Pulling latest version (git pull)..."
-        git -C "$DOTFILES_DIR" pull
+        echo "==> Dotfiles directory already exists. Pulling latest version..."
+        if ! git -C "$DOTFILES_DIR" pull --rebase --autostash; then
+            echo "==> Conflict with local changes detected; resetting to latest origin/main..."
+            git -C "$DOTFILES_DIR" rebase --abort 2>/dev/null || true
+            git -C "$DOTFILES_DIR" fetch origin
+            git -C "$DOTFILES_DIR" reset --hard origin/main
+        fi
     else
         echo "==> Cloning dotfiles from GitHub..."
         git clone https://github.com/coderhenkie/dotfiles.git "$DOTFILES_DIR"
