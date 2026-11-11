@@ -30,13 +30,9 @@ if [ "${DOTFILES_SETUP_RELOADED:-0}" != "1" ]; then
     echo "==> Fetching latest dotfiles..."
 
     if [ -d "$DOTFILES_DIR/.git" ]; then
-        echo "==> Dotfiles directory already exists. Pulling latest version..."
-        if ! git -C "$DOTFILES_DIR" pull --rebase --autostash; then
-            echo "==> Conflict with local changes detected; resetting to latest origin/main..."
-            git -C "$DOTFILES_DIR" rebase --abort 2>/dev/null || true
-            git -C "$DOTFILES_DIR" fetch origin
-            git -C "$DOTFILES_DIR" reset --hard origin/main
-        fi
+        echo "==> Dotfiles directory already exists. Syncing with latest origin/main..."
+        git -C "$DOTFILES_DIR" fetch origin
+        git -C "$DOTFILES_DIR" reset --hard origin/main
     else
         echo "==> Cloning dotfiles from GitHub..."
         git clone https://github.com/coderhenkie/dotfiles.git "$DOTFILES_DIR"
@@ -217,30 +213,7 @@ else
 fi
 
 # ==========================================
-# 8. Color Engine Bootstrap (Including Firefox, Neovim & Herdr)
-# ==========================================
-echo "==> Generating default bootstrap theme in ~/.cache/theme..."
-CACHE_DIR="$HOME/.cache/theme"
-mkdir -p "$CACHE_DIR"
-
-BG="#282a36"
-FG="#f8f8f2"
-ACCENT="#bd93f9"
-
-# Generate all theme files and the ColorEngine icon theme via the central Color Engine (without live reload)
-bash "$DOTFILES_DIR/scripts/apply-theme.sh" "$BG" "$FG" "$ACCENT" --no-reload
-
-# FIREFOX RICE symlink (userChrome.css)
-ln -sf "$CACHE_DIR/userChrome.css" "$FF_DIR/$FF_PROFILE/chrome/userChrome.css"
-
-# HERDR config symlink (only link config.toml so live sockets/logs stay out of git)
-mkdir -p "$HOME/.config/herdr"
-ln -sf "$CACHE_DIR/herdr.toml" "$HOME/.config/herdr/config.toml"
-
-echo "[OK] Bootstrap theme generated."
-
-# ==========================================
-# 9. Set Executable Permissions
+# 8. Set Executable Permissions
 # ==========================================
 echo "==> Setting executable permissions on scripts..."
 
@@ -250,4 +223,26 @@ fi
 
 chmod +x "$DOTFILES_DIR/scripts/"*.sh
 
+# ==========================================
+# 9. Color Engine Bootstrap & Live Reload (Including Firefox, Neovim & Herdr)
+# ==========================================
+echo "==> Generating default bootstrap theme in ~/.cache/theme..."
+CACHE_DIR="$HOME/.cache/theme"
+mkdir -p "$CACHE_DIR"
+
+BG="#282a36"
+FG="#f8f8f2"
+ACCENT="#bd93f9"
+
+# FIREFOX RICE symlink (userChrome.css)
+ln -sf "$CACHE_DIR/userChrome.css" "$FF_DIR/$FF_PROFILE/chrome/userChrome.css"
+
+# HERDR config symlink (only link config.toml so live sockets/logs stay out of git)
+mkdir -p "$HOME/.config/herdr"
+ln -sf "$CACHE_DIR/herdr.toml" "$HOME/.config/herdr/config.toml"
+
+# Generate all theme files, ColorEngine icons, and live-reload i3 if a session is active
+bash "$DOTFILES_DIR/scripts/apply-theme.sh" "$BG" "$FG" "$ACCENT"
+
+echo "[OK] Bootstrap theme generated and applied."
 echo "[OK] Setup completed!"
