@@ -2,10 +2,10 @@
 include ~/.cache/theme/i3.conf
 
 # Shortcut to open the Theme Selector (Mod + t)
-bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/theme-selector.sh
+bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/scripts/theme-selector.sh
 
 # Shortcut for the AI Wallpaper Theme (Mod + Shift + w)
-bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
+bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
 
 # Shortcut to open the Hotkey Menu (Mod + m)
 bindsym $mod+m exec --no-startup-id ~/dotfiles/scripts/hotkey-menu.sh
@@ -18,6 +18,13 @@ set $mod Mod1
 
 # Use the installed JetBrainsMono Nerd Font
 font pango:JetBrainsMono Nerd Font 10
+
+# Window borders and subtle gaps between windows
+default_border pixel 3
+default_floating_border pixel 3
+for_window [class="^.*"] border pixel 3
+gaps inner 4
+gaps outer 1
 
 # Start XDG autostart .desktop files using dex
 exec --no-startup-id dex --autostart --environment i3
