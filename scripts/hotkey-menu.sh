@@ -196,6 +196,7 @@ replace_line_in_config() {
     { print $0 }
     ' "$I3_CONFIG" > "$tmp_file"
     mv "$tmp_file" "$I3_CONFIG"
+    chmod 644 "$I3_CONFIG"
 }
 
 # Delete a specific line in i3/config by line number

@@ -7,20 +7,20 @@ if [ -z "${I3SOCK:-}" ]; then
     [ -n "$I3SOCK" ] && export I3SOCK
 fi
 
-# Controleer of we in de Mod4 (Win) of Mod1 (Alt) state zitten
+# Check whether we are currently using Mod4 (Super/Win) or Mod1 (Alt)
 if grep -Fq 'set $mod Mod4' "$I3_CONFIG"; then
-    echo "==> Switchen van Windows-toets (Mod4) naar Alt-toets (Mod1)..."
+    echo "==> Switching from Super/Win key (Mod4) to Alt key (Mod1)..."
     sed -i 's/set \$mod Mod4/set \$mod Mod1/' "$I3_CONFIG"
     i3-msg reload
-    echo "[OK] Modkey is nu Alt!"
-    
+    echo "[OK] Mod key is now Alt (Mod1)!"
+
 elif grep -Fq 'set $mod Mod1' "$I3_CONFIG"; then
-    echo "==> Switchen van Alt-toets (Mod1) naar Windows-toets (Mod4)..."
+    echo "==> Switching from Alt key (Mod1) to Super/Win key (Mod4)..."
     sed -i 's/set \$mod Mod1/set \$mod Mod4/' "$I3_CONFIG"
     i3-msg reload
-    echo "[OK] Modkey is nu de Windows-toets!"
-    
+    echo "[OK] Mod key is now Super/Win (Mod4)!"
+
 else
-    echo "[!] Kon de mod-variabele niet vinden."
-    echo "Zorg dat je 'set \$mod Mod4' of 'set \$mod Mod1' letterlijk in je i3 config hebt staan."
+    echo "[!] Could not find the mod variable."
+    echo "Make sure 'set \$mod Mod4' or 'set \$mod Mod1' is present in your i3 config."
 fi

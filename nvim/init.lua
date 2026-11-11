@@ -1,8 +1,8 @@
 -- ==========================================
--- Neovim Configuratie (Dynamische Color Engine)
+-- Neovim Configuration (Dynamic Color Engine)
 -- ==========================================
 
--- Basis instellingen
+-- Base settings
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.cursorline = true
@@ -18,7 +18,7 @@ vim.opt.signcolumn = "yes"
 vim.opt.scrolloff = 8
 vim.opt.updatetime = 250
 
--- Functie om het dynamische thema uit ~/.cache/theme/nvim.lua in te laden
+-- Load the dynamic theme generated in ~/.cache/theme/nvim.lua
 local theme_file = vim.fn.expand("~/.cache/theme/nvim.lua")
 
 local function load_dynamic_theme()
@@ -27,11 +27,11 @@ local function load_dynamic_theme()
     end
 end
 
--- Laad thema direct bij opstarten
+-- Load theme immediately on startup
 load_dynamic_theme()
 
--- Live reload: luister naar wijzigingen in ~/.cache/theme zodat openstaande
--- Neovim-vensters direct meekleuren zodra je een ander thema of wallpaper kiest
+-- Live reload: watch ~/.cache/theme for changes so open Neovim windows
+-- update their colors immediately when switching themes or wallpapers
 local uv = vim.uv or vim.loop
 if uv then
     local watcher = uv.new_fs_event()
