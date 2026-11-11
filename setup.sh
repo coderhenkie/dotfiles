@@ -166,7 +166,7 @@ echo "==> Creating symlinks for configuration directories..."
 CONFIG_DIR="$HOME/.config"
 mkdir -p "$CONFIG_DIR"
 
-APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "qutebrowser")
+APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "qutebrowser" "btop")
 
 for app in "${APPS[@]}"; do
     TARGET_DIR="$CONFIG_DIR/$app"
@@ -240,6 +240,10 @@ ln -sf "$CACHE_DIR/userChrome.css" "$FF_DIR/$FF_PROFILE/chrome/userChrome.css"
 # HERDR config symlink (only link config.toml so live sockets/logs stay out of git)
 mkdir -p "$HOME/.config/herdr"
 ln -sf "$CACHE_DIR/herdr.toml" "$HOME/.config/herdr/config.toml"
+
+# BTOP theme symlink
+mkdir -p "$HOME/.config/btop/themes"
+ln -sf "$CACHE_DIR/btop.theme" "$HOME/.config/btop/themes/color_engine.theme"
 
 # Generate all theme files, ColorEngine icons, and live-reload i3 if a session is active
 bash "$DOTFILES_DIR/scripts/apply-theme.sh" "$BG" "$FG" "$ACCENT"
