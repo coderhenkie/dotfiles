@@ -8,7 +8,15 @@
 
 set -u
 
-I3_CONFIG="$HOME/dotfiles/i3/config"
+I3_MAIN_CONFIG="$HOME/dotfiles/i3/config"
+I3_DEFAULT_HOTKEYS="$HOME/dotfiles/i3/hotkeys.default"
+I3_CONFIG="$HOME/dotfiles/i3/hotkeys.conf"
+
+# Initialize hotkeys.conf from hotkeys.default if it does not exist yet
+if [ ! -f "$I3_CONFIG" ] && [ -f "$I3_DEFAULT_HOTKEYS" ]; then
+    cp "$I3_DEFAULT_HOTKEYS" "$I3_CONFIG"
+fi
+
 ROFI_MAIN='window { width: 45%; } listview { lines: 14; }'
 ROFI_SUB='window { width: 42%; } listview { lines: 6; }'
 ROFI_WAIT='window { width: 40%; } inputbar { enabled: false; } listview { lines: 1; }'
@@ -160,7 +168,7 @@ parse_bindings() {
 apply_and_validate() {
     local backup_file="$1"
     local err_out
-    if err_out=$(i3 -C -c "$I3_CONFIG" 2>&1); then
+    if err_out=$(i3 -C -c "$I3_MAIN_CONFIG" 2>&1); then
         rm -f "$backup_file"
         reload_i3_safe
         return 0
