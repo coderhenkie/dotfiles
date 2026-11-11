@@ -6,49 +6,49 @@
 
 set -eu
 
-echo "==> Start systeem configuratie..."
+echo "==> Starting system configuration..."
 
 # ==========================================
-# 1. Pakketbeheer & Basis (Nala, Git, Curl)
+# 1. Package Management & Base Tools (Nala, Git, Curl)
 # ==========================================
-echo "==> Basis updaten en Nala/Git installeren..."
+echo "==> Updating base packages and installing Nala/Git..."
 sudo apt update
 sudo apt install -y nala curl git
 
-echo "==> Snelste mirrors ophalen met Nala..."
+echo "==> Fetching fastest mirrors with Nala..."
 sudo nala fetch --auto -y
 
-echo "==> Systeem upgraden via Nala..."
+echo "==> Upgrading system via Nala..."
 sudo nala upgrade -y
 
 # ==========================================
-# 2. Meest Recente Dotfiles Ophalen
+# 2. Fetch Latest Dotfiles
 # ==========================================
-echo "==> Meest recente dotfiles downloaden..."
+echo "==> Fetching latest dotfiles..."
 DOTFILES_DIR="$HOME/dotfiles"
 
 if [ -d "$DOTFILES_DIR/.git" ]; then
-    echo "==> Dotfiles map bestaat al. Updaten naar de nieuwste versie (git pull)..."
+    echo "==> Dotfiles directory already exists. Pulling latest version (git pull)..."
     git -C "$DOTFILES_DIR" pull
 else
-    echo "==> Dotfiles clonen vanaf GitHub..."
+    echo "==> Cloning dotfiles from GitHub..."
     git clone https://github.com/coderhenkie/dotfiles.git "$DOTFILES_DIR"
 fi
 
 # ==========================================
-# 3. Xorg, Display Manager & Applicaties
+# 3. Xorg, Display Manager & Applications
 # ==========================================
-echo "==> Xorg en LightDM installeren..."
+echo "==> Installing Xorg and LightDM..."
 sudo nala install -y xserver-xorg xinit lightdm lightdm-gtk-greeter light-locker
 sudo systemctl enable lightdm
 
-echo "==> Applicaties & CLI tools installeren (inclusief Firefox ESR, JQ en NPM)..."
+echo "==> Installing applications & CLI tools (including Firefox ESR, JQ, and NPM)..."
 sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc qutebrowser fastfetch thunar btop firefox-esr jq npm
 
 # ==========================================
 # 4. AppImages: Neovim & Obsidian
 # ==========================================
-echo "==> AppImages downloaden en configureren..."
+echo "==> Downloading and configuring AppImages..."
 APPIMAGE_DIR="$HOME/appimages"
 LOCAL_BIN="$HOME/.local/bin"
 
@@ -57,29 +57,29 @@ mkdir -p "$LOCAL_BIN"
 
 # --- NEOVIM ---
 if [ ! -f "$APPIMAGE_DIR/nvim.appimage" ]; then
-    echo " -> Neovim downloaden..."
+    echo " -> Downloading Neovim..."
     curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage
     chmod u+x nvim-linux-x86_64.appimage
     mv nvim-linux-x86_64.appimage "$APPIMAGE_DIR/nvim.appimage"
     ln -sf "$APPIMAGE_DIR/nvim.appimage" "$LOCAL_BIN/nvim"
-    echo "[OK] Neovim geïnstalleerd."
+    echo "[OK] Neovim installed."
 else
-    echo "[OK] Neovim was al geïnstalleerd."
+    echo "[OK] Neovim is already installed."
 fi
 
 # --- OBSIDIAN (LATEST, NO ARM64) ---
 if [ ! -f "$APPIMAGE_DIR/obsidian.appimage" ]; then
-    echo " -> Laatste versie van Obsidian ophalen via GitHub API..."
+    echo " -> Fetching latest Obsidian release via GitHub API..."
     OBSIDIAN_URL=$(curl -s https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest | jq -r '.assets[] | .browser_download_url' | grep '\.AppImage$' | grep -v 'arm64' | head -n 1)
-    
+
     if [ -n "$OBSIDIAN_URL" ]; then
         curl -LO "$OBSIDIAN_URL"
         OBS_APPIMAGE=$(basename "$OBSIDIAN_URL")
         chmod u+x "$OBS_APPIMAGE"
         mv "$OBS_APPIMAGE" "$APPIMAGE_DIR/obsidian.appimage"
         ln -sf "$APPIMAGE_DIR/obsidian.appimage" "$LOCAL_BIN/obsidian"
-        
-        # Maak de .desktop file voor Rofi (met --no-sandbox vlag)
+
+        # Create the .desktop entry for Rofi (with --no-sandbox flag)
         mkdir -p "$HOME/.local/share/applications"
         cat <<EOF > "$HOME/.local/share/applications/obsidian.desktop"
 [Desktop Entry]
@@ -92,42 +92,42 @@ StartupWMClass=obsidian
 Comment=Obsidian Markdown Note-taking
 Categories=Office;
 EOF
-        echo "[OK] Obsidian succesvol geïnstalleerd en aan Rofi toegevoegd."
+        echo "[OK] Obsidian installed and added to Rofi."
     else
-        echo "[!] Kon Obsidian download URL niet vinden."
+        echo "[!] Could not find Obsidian download URL."
     fi
 else
-    echo "[OK] Obsidian was al geïnstalleerd."
+    echo "[OK] Obsidian is already installed."
 fi
 
 # ==========================================
 # 4.5 Extra CLI Tools: Herdr & Antigravity CLI
 # ==========================================
-echo "==> Extra CLI Tools configureren..."
+echo "==> Configuring extra CLI tools..."
 
 # --- Herdr ---
-echo " -> Herdr installeren..."
+echo " -> Installing Herdr..."
 curl -fsSL https://herdr.dev/install.sh | sh
-echo "[OK] Herdr geïnstalleerd."
+echo "[OK] Herdr installed."
 
 # --- Antigravity CLI ---
-echo " -> Antigravity CLI installeren..."
+echo " -> Installing Antigravity CLI..."
 curl -fsSL https://antigravity.google/cli/install.sh | bash
-echo "[OK] Antigravity CLI geïnstalleerd."
+echo "[OK] Antigravity CLI installed."
 
 # ==========================================
-# 4.8 PATH configuratie voor ~/.local/bin
+# 4.8 PATH configuration for ~/.local/bin
 # ==========================================
-echo "==> PATH controleren voor ~/.local/bin..."
+echo "==> Checking PATH for ~/.local/bin..."
 if ! grep -q "$HOME/.local/bin" "$HOME/.bashrc"; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
-    echo "[OK] ~/.local/bin toegevoegd aan ~/.bashrc"
+    echo "[OK] Added ~/.local/bin to ~/.bashrc"
 fi
 
 # ==========================================
-# 5. Nerd Fonts Installeren
+# 5. Install Nerd Fonts
 # ==========================================
-echo "==> JetBrainsMono Nerd Font installeren..."
+echo "==> Installing JetBrainsMono Nerd Font..."
 FONT_DIR="$HOME/.local/share/fonts"
 
 if [ ! -d "$FONT_DIR/JetBrainsMono" ]; then
@@ -136,16 +136,16 @@ if [ ! -d "$FONT_DIR/JetBrainsMono" ]; then
     unzip -qo /tmp/JetBrainsMono.zip -d "$FONT_DIR/JetBrainsMono"
     rm /tmp/JetBrainsMono.zip
     fc-cache -fv
-    echo "[OK] Font geïnstalleerd."
+    echo "[OK] Font installed."
 fi
 
 # ==========================================
-# 6. Pywal (AI Color Engine) Installeren
+# 6. Install Pywal (AI Color Engine)
 # ==========================================
-echo "==> Pywal en Python dependencies installeren..."
+echo "==> Installing Pywal and Python dependencies..."
 sudo nala install -y python3-pip python3-venv imagemagick
 
-echo "==> Virtuele omgeving voor Pywal aanmaken in ~/.local/pywal-venv..."
+echo "==> Creating virtual environment for Pywal in ~/.local/pywal-venv..."
 python3 -m venv "$HOME/.local/pywal-venv"
 "$HOME/.local/pywal-venv/bin/pip" install pywal
 ln -sf "$HOME/.local/pywal-venv/bin/wal" "$LOCAL_BIN/wal"
@@ -153,7 +153,7 @@ ln -sf "$HOME/.local/pywal-venv/bin/wal" "$LOCAL_BIN/wal"
 # ==========================================
 # 7. Dotfiles & Firefox Setup
 # ==========================================
-echo "==> Symlinks aanmaken voor de configuratiebestanden..."
+echo "==> Creating symlinks for configuration directories..."
 CONFIG_DIR="$HOME/.config"
 mkdir -p "$CONFIG_DIR"
 
@@ -172,12 +172,12 @@ for app in "${APPS[@]}"; do
     fi
 done
 
-echo "==> Firefox Ricing Profiel controleren..."
+echo "==> Checking Firefox ricing profile..."
 FF_DIR="$HOME/.mozilla/firefox"
 FF_PROFILE="rice.default"
 
 if [ ! -d "$FF_DIR/$FF_PROFILE" ]; then
-    echo " -> Nieuw Firefox rice-profiel aanmaken..."
+    echo " -> Creating new Firefox rice profile..."
     mkdir -p "$FF_DIR/$FF_PROFILE/chrome"
 
     cat <<EOF > "$FF_DIR/profiles.ini"
@@ -199,14 +199,14 @@ user_pref("browser.compactmode.show", true);
 user_pref("browser.uidensity", 1);
 EOF
 else
-    echo "[OK] Firefox rice-profiel bestaat al. (We raken je profiel niet aan!)"
+    echo "[OK] Firefox rice profile already exists. (Leaving existing profile untouched!)"
     mkdir -p "$FF_DIR/$FF_PROFILE/chrome"
 fi
 
 # ==========================================
-# 8. Color Engine Bootstrap (Inclusief Firefox, Neovim & Herdr)
+# 8. Color Engine Bootstrap (Including Firefox, Neovim & Herdr)
 # ==========================================
-echo "==> Standaard thema (bootstrap) genereren in ~/.cache/theme..."
+echo "==> Generating default bootstrap theme in ~/.cache/theme..."
 CACHE_DIR="$HOME/.cache/theme"
 mkdir -p "$CACHE_DIR"
 
@@ -214,22 +214,22 @@ BG="#282a36"
 FG="#f8f8f2"
 ACCENT="#bd93f9"
 
-# Genereer alle themabestanden en het ColorEngine icon-theme via de centrale Color Engine (zonder live reload)
+# Generate all theme files and the ColorEngine icon theme via the central Color Engine (without live reload)
 bash "$DOTFILES_DIR/scripts/apply-theme.sh" "$BG" "$FG" "$ACCENT" --no-reload
 
 # FIREFOX RICE symlink (userChrome.css)
 ln -sf "$CACHE_DIR/userChrome.css" "$FF_DIR/$FF_PROFILE/chrome/userChrome.css"
 
-# HERDR config symlink (alleen config.toml linken zodat sockets/logs buiten git blijven)
+# HERDR config symlink (only link config.toml so live sockets/logs stay out of git)
 mkdir -p "$HOME/.config/herdr"
 ln -sf "$CACHE_DIR/herdr.toml" "$HOME/.config/herdr/config.toml"
 
-echo "[OK] Bootstrap thema gegenereerd."
+echo "[OK] Bootstrap theme generated."
 
 # ==========================================
-# 9. Rechten goedzetten
+# 9. Set Executable Permissions
 # ==========================================
-echo "==> Uitvoerrechten instellen voor scripts..."
+echo "==> Setting executable permissions on scripts..."
 
 if [ -f "$DOTFILES_DIR/polybar/launch.sh" ]; then
     chmod +x "$DOTFILES_DIR/polybar/launch.sh"
@@ -237,4 +237,4 @@ fi
 
 chmod +x "$DOTFILES_DIR/scripts/"*.sh
 
-echo "[OK] Setup voltooid!"
+echo "[OK] Setup completed!"

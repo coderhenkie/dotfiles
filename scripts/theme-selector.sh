@@ -2,16 +2,16 @@
 
 THEME_DIR="$HOME/dotfiles/themes"
 
-# 1. Open Rofi zodat jij een thema kunt kiezen met de pijltjes
-THEME_NAME=$(ls "$THEME_DIR" | rofi -dmenu -i -p "Thema")
+# 1. Open Rofi so you can select a theme with the arrow keys
+THEME_NAME=$(ls "$THEME_DIR" | rofi -dmenu -i -p "Theme")
 
-# Als je op ESC drukt, stop het script
+# Exit if Esc is pressed
 if [ -z "$THEME_NAME" ]; then
     exit 0
 fi
 
-# 2. Laad de 3 kleurcodes ($bg, $fg, $accent) in het geheugen
+# 2. Load the 3 color variables ($bg, $fg, $accent) into memory
 source "$THEME_DIR/$THEME_NAME"
 
-# 3. Pas de kleuren toe via de centrale Color Engine
+# 3. Apply the colors through the central Color Engine
 bash "$HOME/dotfiles/scripts/apply-theme.sh" "$bg" "$fg" "$accent"

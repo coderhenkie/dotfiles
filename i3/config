@@ -1,13 +1,13 @@
-# Laad het dynamische thema in
+# Load the dynamic theme from the Color Engine
 include ~/.cache/theme/i3.conf
 
-# Sneltoets om je Theme-Selector te openen (Mod + t)
+# Shortcut to open the Theme Selector (Mod + t)
 bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/theme-selector.sh
 
-# Sneltoets voor AI-Wallpaper thema (Mod + w)
+# Shortcut for the AI Wallpaper Theme (Mod + Shift + w)
 bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
 
-# Sneltoets om het Hotkey-Menu te openen (Mod + m)
+# Shortcut to open the Hotkey Menu (Mod + m)
 bindsym $mod+m exec --no-startup-id ~/dotfiles/scripts/hotkey-menu.sh
 
 # i3 config file (v4)
@@ -16,19 +16,19 @@ bindsym $mod+m exec --no-startup-id ~/dotfiles/scripts/hotkey-menu.sh
 
 set $mod Mod1
 
-# AANGEPAST: Gebruik het Nerd Font dat we hebben geïnstalleerd
+# Use the installed JetBrainsMono Nerd Font
 font pango:JetBrainsMono Nerd Font 10
 
-# Start XDG autostart .desktop files using dex (exclusief light-locker om VM lock-freezes te voorkomen)
+# Start XDG autostart .desktop files using dex
 exec --no-startup-id dex --autostart --environment i3
 
-# Voorkom X11 screen blanking / DPMS monitor-off freezes in de VM
+# Prevent X11 screen blanking / DPMS monitor-off freezes in the VM
 exec_always --no-startup-id xset s off -dpms
 
 # NetworkManager applet
 exec --no-startup-id nm-applet
 
-# AANGEPAST: Volume regelaars (refresh_i3status verwijderd, want Polybar regelt dit zelf)
+# Volume controls (managed via PulseAudio / PipeWire; Polybar handles status display)
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +10%
 bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -10%
 bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle
@@ -37,63 +37,63 @@ bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOU
 # Use Mouse+$mod to drag floating windows to their wanted position
 floating_modifier $mod
 
-# move tiling windows via drag & drop by left-clicking into the title bar
+# Move tiling windows via drag & drop by left-clicking into the title bar
 tiling_drag modifier titlebar
 
-# start a terminal (Jouw wijziging behouden)
+# Start a terminal
 bindsym $mod+Return exec kitty
 
-# kill focused window (Jouw wijziging behouden)
+# Kill focused window
 bindsym $mod+q kill
 
-# AANGEPAST: start rofi met het juiste commando voor het applicatiemenu
+# Start Rofi application launcher
 bindsym $mod+space exec --no-startup-id "rofi -show drun"
 
-# change focus
+# Change focus
 bindsym $mod+h focus left
 bindsym $mod+j focus down
 bindsym $mod+k focus up
 bindsym $mod+l focus right
 
-# alternatively, you can use the cursor keys:
+# Alternatively, you can use the cursor keys:
 bindsym $mod+Left focus left
 bindsym $mod+Down focus down
 bindsym $mod+Up focus up
 bindsym $mod+Right focus right
 
-# move focused window
+# Move focused window
 bindsym $mod+Shift+h move left
 bindsym $mod+Shift+j move down
 bindsym $mod+Shift+k move up
 bindsym $mod+Shift+l move right
 
-# alternatively, you can use the cursor keys:
+# Alternatively, you can use the cursor keys:
 bindsym $mod+Shift+Left move left
 bindsym $mod+Shift+Down move down
 bindsym $mod+Shift+Up move up
 bindsym $mod+Shift+Right move right
 
-# split in horizontal orientation
+# Split in horizontal orientation
 bindsym $mod+b split h
 
-# split in vertical orientation
+# Split in vertical orientation
 bindsym $mod+v split v
 
-# enter fullscreen mode for the focused container
+# Enter fullscreen mode for the focused container
 bindsym $mod+f fullscreen toggle
 
-# change container layout (stacked, tabbed, toggle split)
+# Change container layout (stacked, tabbed, toggle split)
 bindsym $mod+s layout stacking
 bindsym $mod+w layout tabbed
 bindsym $mod+e layout toggle split
 
-# toggle tiling / floating
+# Toggle tiling / floating
 bindsym $mod+Shift+space floating toggle
 
-# change focus between tiling / floating windows
+# Change focus between tiling / floating windows
 bindsym $mod+d focus mode_toggle
 
-# focus the parent container
+# Focus the parent container
 bindsym $mod+a focus parent
 
 # Define names for default workspaces
@@ -108,7 +108,7 @@ set $ws8 "8"
 set $ws9 "9"
 set $ws10 "10"
 
-# switch to workspace
+# Switch to workspace
 bindsym $mod+1 workspace number $ws1
 bindsym $mod+2 workspace number $ws2
 bindsym $mod+3 workspace number $ws3
@@ -120,7 +120,7 @@ bindsym $mod+8 workspace number $ws8
 bindsym $mod+9 workspace number $ws9
 bindsym $mod+0 workspace number $ws10
 
-# move focused container to workspace
+# Move focused container to workspace
 bindsym $mod+Shift+1 move container to workspace number $ws1
 bindsym $mod+Shift+2 move container to workspace number $ws2
 bindsym $mod+Shift+3 move container to workspace number $ws3
@@ -132,14 +132,14 @@ bindsym $mod+Shift+8 move container to workspace number $ws8
 bindsym $mod+Shift+9 move container to workspace number $ws9
 bindsym $mod+Shift+0 move container to workspace number $ws10
 
-# reload the configuration file
+# Reload the configuration file
 bindsym $mod+Shift+c reload
-# restart i3 inplace
+# Restart i3 inplace
 bindsym $mod+Shift+r restart
-# exit i3
+# Exit i3
 bindsym $mod+Shift+e exec "i3-nagbar -t warning -m 'You pressed the exit shortcut. Do you really want to exit i3? This will end your X session.' -B 'Yes, exit i3' 'i3-msg exit'"
 
-# resize window
+# Resize window
 mode "resize" {
         bindsym j resize shrink width 10 px or 10 ppt
         bindsym k resize grow height 10 px or 10 ppt
@@ -158,20 +158,20 @@ mode "resize" {
 bindsym $mod+r mode "resize"
 
 # ==========================================
-# AUTOSTART & UITERLIJK (NIEUW)
+# AUTOSTART & APPEARANCE
 # ==========================================
 
-# AANGEPAST: Standaard i3bar verwijderd en vervangen door Polybar
+# Launch Polybar (replaces default i3bar)
 exec_always --no-startup-id ~/.config/polybar/launch.sh
 
-# Herstel altijd de laatst gekozen wallpaper
+# Always restore the last selected wallpaper
 exec_always --no-startup-id ~/.fehbg
 
-# Start Picom voor schaduwen en transparantie
+# Start Picom for shadows, rounded corners, and transparency
 exec_always --no-startup-id picom --config ~/.config/picom/picom.conf -b
 
+# Swap CapsLock and Escape
 exec_always --no-startup-id setxkbmap -option caps:swapescape
 
+# Merge Xresources
 exec --no-startup-id xrdb -merge ~/.Xresources
-
-

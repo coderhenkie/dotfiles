@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
-# Sluit eventuele openstaande Polybar processen
+# Terminate any running Polybar instances
 killall -q polybar
 
-# Wacht tot de processen echt weg zijn
+# Wait until the processes have completely shut down
 while pgrep -u $UID -x polybar >/dev/null; do sleep 1; done
 
-# Start de balk (we noemen de balk 'main')
+# Launch the main bar
 polybar main -c ~/.config/polybar/config.ini &

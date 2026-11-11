@@ -8,14 +8,14 @@ ACCENT="${3:-}"
 MODE="${4:-reload}"
 
 if [ -z "$BG" ] || [ -z "$FG" ] || [ -z "$ACCENT" ]; then
-    echo "Gebruik: $0 <BG> <FG> <ACCENT> [--no-reload]" >&2
+    echo "Usage: $0 <BG> <FG> <ACCENT> [--no-reload]" >&2
     exit 1
 fi
 
 # ==========================================
-# Centrale Kleurenberekening (Color Blending)
+# Central Color Calculation (Color Blending)
 # ==========================================
-# Meng twee hex-kleuren (#rrggbb) op basis van gewicht (0-100% van kleur 2)
+# Blend two hex colors (#rrggbb) based on weight (0-100% of color 2)
 blend_hex() {
     local c1="${1#\#}"
     local c2="${2#\#}"
@@ -31,14 +31,14 @@ blend_hex() {
     printf "#%02x%02x%02x\n" "$r" "$g" "$b"
 }
 
-# Afgeleide schakeringen uit BG, FG en ACCENT
-BG_ALT=$(blend_hex "$BG" "$FG" 8)          # Subtiel verhoogde achtergrond (balken, floats, odd tabs)
-BG_VISUAL=$(blend_hex "$BG" "$ACCENT" 28)  # Selectie- en highlight-achtergrond
-FG_MUTED=$(blend_hex "$BG" "$FG" 48)       # Gedimde tekst, comments & inactieve elementen
-ACCENT_SOFT=$(blend_hex "$FG" "$ACCENT" 65) # Zachtere variant van de accentkleur
-ACCENT_DIM=$(blend_hex "$BG" "$ACCENT" 75)  # Diepere variant van de accentkleur
+# Derived shades from BG, FG, and ACCENT
+BG_ALT=$(blend_hex "$BG" "$FG" 8)          # Subtle elevated background (bars, floats, odd tabs)
+BG_VISUAL=$(blend_hex "$BG" "$ACCENT" 28)  # Selection and highlight background
+FG_MUTED=$(blend_hex "$BG" "$FG" 48)       # Muted text, comments & inactive elements
+ACCENT_SOFT=$(blend_hex "$FG" "$ACCENT" 65) # Softer variant of the accent color
+ACCENT_DIM=$(blend_hex "$BG" "$ACCENT" 75)  # Deeper variant of the accent color
 
-# Harmonische ANSI-terminalkleuren (meekleurend met het actieve thema)
+# Harmonic ANSI terminal colors (blended with the active theme)
 ANSI_RED=$(blend_hex "#ff5555" "$ACCENT" 20)
 ANSI_GREEN=$(blend_hex "#50fa7b" "$ACCENT" 25)
 ANSI_YELLOW=$(blend_hex "#f1fa8c" "$ACCENT" 20)
@@ -62,10 +62,10 @@ urgent = $ANSI_RED
 EOF
 
 # ==========================================
-# 2. Kitty Terminal (Volledig 16-kleuren ANSI palet + Tabs)
+# 2. Kitty Terminal (Full 16-color ANSI palette + Tabs)
 # ==========================================
 cat <<EOF > "$CACHE_DIR/kitty.conf"
-# Basis & Cursor
+# Base & Cursor
 background            $BG
 foreground            $FG
 cursor                $ACCENT
@@ -74,7 +74,7 @@ selection_background  $BG_VISUAL
 selection_foreground  $FG
 url_color             $ACCENT_SOFT
 
-# Vensterranden & Tabbladen
+# Window Borders & Tabs
 active_border_color   $ACCENT
 inactive_border_color $BG_ALT
 active_tab_background   $ACCENT
@@ -82,41 +82,41 @@ active_tab_foreground   $BG
 inactive_tab_background $BG_ALT
 inactive_tab_foreground $FG_MUTED
 
-# Zwart / Grijs (0 & 8)
+# Black / Gray (0 & 8)
 color0  $BG
 color8  $FG_MUTED
 
-# Rood (1 & 9)
+# Red (1 & 9)
 color1  $ANSI_RED
 color9  $ANSI_RED
 
-# Groen (2 & 10)
+# Green (2 & 10)
 color2  $ANSI_GREEN
 color10 $ANSI_GREEN
 
-# Geel (3 & 11)
+# Yellow (3 & 11)
 color3  $ANSI_YELLOW
 color11 $ANSI_YELLOW
 
-# Blauw / Primair Accent (4 & 12)
+# Blue / Primary Accent (4 & 12)
 color4  $ACCENT_DIM
 color12 $ACCENT
 
-# Magenta / Secundair Accent (5 & 13)
+# Magenta / Secondary Accent (5 & 13)
 color5  $ACCENT
 color13 $ACCENT_SOFT
 
-# Cyaan (6 & 14)
+# Cyan (6 & 14)
 color6  $ANSI_CYAN
 color14 $ACCENT_SOFT
 
-# Wit / Voorgrond (7 & 15)
+# White / Foreground (7 & 15)
 color7  $FG
 color15 $FG
 EOF
 
 # ==========================================
-# 3. i3 Window Manager (Actieve & Inactieve Randkleuren)
+# 3. i3 Window Manager (Active & Inactive Border Colors)
 # ==========================================
 cat <<EOF > "$CACHE_DIR/i3.conf"
 set \$bg      $BG
@@ -152,10 +152,10 @@ cat <<EOF > "$CACHE_DIR/rofi.rasi"
 EOF
 
 # ==========================================
-# 5. Qutebrowser (Tabs, Statusbalk & Completion Menu)
+# 5. Qutebrowser (Tabs, Statusbar & Completion Menu)
 # ==========================================
 cat <<EOF > "$CACHE_DIR/qutebrowser.py"
-# Statusbalk
+# Statusbar
 c.colors.statusbar.normal.bg = "$BG"
 c.colors.statusbar.normal.fg = "$FG"
 c.colors.statusbar.command.bg = "$BG_ALT"
@@ -166,7 +166,7 @@ c.colors.statusbar.url.fg = "$FG"
 c.colors.statusbar.url.success.https.fg = "$ACCENT_SOFT"
 c.colors.statusbar.url.hover.fg = "$ACCENT"
 
-# Tabbladen (subtiel onderscheid tussen even/oneven en actief)
+# Tabs (subtle distinction between even/odd and active)
 c.colors.tabs.bar.bg = "$BG"
 c.colors.tabs.even.bg = "$BG"
 c.colors.tabs.even.fg = "$FG_MUTED"
@@ -177,7 +177,7 @@ c.colors.tabs.selected.even.fg = "$BG"
 c.colors.tabs.selected.odd.bg = "$ACCENT"
 c.colors.tabs.selected.odd.fg = "$BG"
 
-# Autocompletion / Suggestiemenu
+# Autocompletion / Suggestion Menu
 c.colors.completion.fg = "$FG"
 c.colors.completion.odd.bg = "$BG"
 c.colors.completion.even.bg = "$BG_ALT"
@@ -189,7 +189,7 @@ c.colors.completion.item.selected.border.top = "$ACCENT"
 c.colors.completion.item.selected.border.bottom = "$ACCENT"
 c.colors.completion.match.fg = "$ACCENT_SOFT"
 
-# Hints (f-toets links)
+# Hints (f-key links)
 c.colors.hints.bg = "$ACCENT"
 c.colors.hints.fg = "$BG"
 c.colors.hints.match.fg = "$BG_VISUAL"
@@ -202,7 +202,7 @@ c.content.blocking.method = "both"
 EOF
 
 # ==========================================
-# 6. Thunar / GTK3 CSS & Dynamische Folder Iconen
+# 6. Thunar / GTK3 CSS & Dynamic Folder Icons
 # ==========================================
 mkdir -p "$HOME/.config/gtk-3.0"
 cat <<EOF > "$HOME/.config/gtk-3.0/settings.ini"
@@ -222,7 +222,7 @@ cat <<EOF > "$CACHE_DIR/gtk.css"
 @define-color theme_unfocused_text_color $FG_MUTED;
 @define-color borders $BG_VISUAL;
 
-/* Laat symbolische zijbalk-iconen in Thunar meekleuren met de accentkleur */
+/* Color symbolic sidebar icons in Thunar with the accent color */
 .sidebar image,
 placessidebar image {
     color: $ACCENT;
@@ -230,14 +230,14 @@ placessidebar image {
 EOF
 ln -sf "$CACHE_DIR/gtk.css" "$HOME/.config/gtk-3.0/gtk.css"
 
-# Dynamisch Icon Theme (ColorEngine) voor Thunar mappen
+# Dynamic Icon Theme (ColorEngine) for Thunar folders
 ICON_DIR="$HOME/.local/share/icons/ColorEngine"
 mkdir -p "$ICON_DIR/scalable/places" "$ICON_DIR/scalable/status" "$ICON_DIR/16x16/places" "$ICON_DIR/16x16/status"
 
 cat <<EOF > "$ICON_DIR/index.theme"
 [Icon Theme]
 Name=ColorEngine
-Comment=Dynamische Color Engine Folder Iconen (erft van Adwaita)
+Comment=Dynamic Color Engine Folder Icons (inherits from Adwaita)
 Inherits=Adwaita,AdwaitaLegacy,hicolor
 Directories=scalable/places,scalable/status,16x16/places,16x16/status
 
@@ -270,7 +270,7 @@ MaxSize=512
 Type=Scalable
 EOF
 
-# Kleur voor het voorblad en de glans van de map
+# Shades for the folder back, base, front, and highlight
 FOLDER_BACK=$(blend_hex "$BG" "$ACCENT" 65)
 FOLDER_BASE="$ACCENT_DIM"
 FOLDER_FRONT="$ACCENT"
@@ -350,7 +350,7 @@ EOF
 # 8. Neovim Color Engine (nvim.lua)
 # ==========================================
 cat <<EOF > "$CACHE_DIR/nvim.lua"
--- Gegenereerd door apply-theme.sh
+-- Generated by apply-theme.sh
 local bg          = "$BG"
 local bg_alt      = "$BG_ALT"
 local bg_visual   = "$BG_VISUAL"
@@ -423,7 +423,7 @@ EOF
 # 9. Herdr (config.toml via ~/.cache/theme/herdr.toml)
 # ==========================================
 cat <<EOF > "$CACHE_DIR/herdr.toml"
-# Gegenereerd door apply-theme.sh (Dotfiles Color Engine)
+# Generated by apply-theme.sh (Dotfiles Color Engine)
 onboarding = false
 
 [theme]
@@ -447,10 +447,10 @@ mkdir -p "$HOME/.config/herdr"
 ln -sf "$CACHE_DIR/herdr.toml" "$HOME/.config/herdr/config.toml"
 
 # ==========================================
-# 10. Live herladen (tenzij --no-reload is meegegeven vanuit setup.sh)
+# 10. Live Reload (unless --no-reload is passed from setup.sh)
 # ==========================================
 if [ "$MODE" != "--no-reload" ]; then
-    # Kitty ondersteunt live config-reload via het SIGUSR1 signaal!
+    # Kitty supports live config reload via SIGUSR1
     if pgrep -x "kitty" > /dev/null; then
         pkill -USR1 -x kitty || true
     fi
