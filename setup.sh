@@ -6,33 +6,41 @@
 
 set -eu
 
-echo "==> Starting system configuration..."
-
-# ==========================================
-# 1. Package Management & Base Tools (Nala, Git, Curl)
-# ==========================================
-echo "==> Updating base packages and installing Nala/Git..."
-sudo apt update
-sudo apt install -y nala curl git
-
-echo "==> Fetching fastest mirrors with Nala..."
-sudo nala fetch --auto -y
-
-echo "==> Upgrading system via Nala..."
-sudo nala upgrade -y
-
-# ==========================================
-# 2. Fetch Latest Dotfiles
-# ==========================================
-echo "==> Fetching latest dotfiles..."
 DOTFILES_DIR="$HOME/dotfiles"
 
-if [ -d "$DOTFILES_DIR/.git" ]; then
-    echo "==> Dotfiles directory already exists. Pulling latest version (git pull)..."
-    git -C "$DOTFILES_DIR" pull
-else
-    echo "==> Cloning dotfiles from GitHub..."
-    git clone https://github.com/coderhenkie/dotfiles.git "$DOTFILES_DIR"
+if [ "${DOTFILES_SETUP_RELOADED:-0}" != "1" ]; then
+    echo "==> Starting system configuration..."
+
+    # ==========================================
+    # 1. Package Management & Base Tools (Nala, Git, Curl)
+    # ==========================================
+    echo "==> Updating base packages and installing Nala/Git..."
+    sudo apt update
+    sudo apt install -y nala curl git
+
+    echo "==> Fetching fastest mirrors with Nala..."
+    sudo nala fetch --auto -y
+
+    echo "==> Upgrading system via Nala..."
+    sudo nala upgrade -y
+
+    # ==========================================
+    # 2. Fetch Latest Dotfiles & Re-exec Latest Setup Script
+    # ==========================================
+    echo "==> Fetching latest dotfiles..."
+
+    if [ -d "$DOTFILES_DIR/.git" ]; then
+        echo "==> Dotfiles directory already exists. Pulling latest version (git pull)..."
+        git -C "$DOTFILES_DIR" pull
+    else
+        echo "==> Cloning dotfiles from GitHub..."
+        git clone https://github.com/coderhenkie/dotfiles.git "$DOTFILES_DIR"
+    fi
+
+    echo "==> Restarting setup using the latest version of $DOTFILES_DIR/setup.sh..."
+    chmod +x "$DOTFILES_DIR/setup.sh"
+    export DOTFILES_SETUP_RELOADED=1
+    exec bash "$DOTFILES_DIR/setup.sh" "$@"
 fi
 
 # ==========================================
