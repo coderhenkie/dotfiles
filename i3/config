@@ -5,7 +5,10 @@ include ~/.cache/theme/i3.conf
 bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/theme-selector.sh
 
 # Sneltoets voor AI-Wallpaper thema (Mod + w)
-bindsym $mod+shift+w exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
+bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
+
+# Sneltoets om het Hotkey-Menu te openen (Mod + m)
+bindsym $mod+m exec --no-startup-id ~/dotfiles/scripts/hotkey-menu.sh
 
 # i3 config file (v4)
 #
@@ -16,11 +19,11 @@ set $mod Mod1
 # AANGEPAST: Gebruik het Nerd Font dat we hebben geïnstalleerd
 font pango:JetBrainsMono Nerd Font 10
 
-# Start XDG autostart .desktop files using dex.
+# Start XDG autostart .desktop files using dex (exclusief light-locker om VM lock-freezes te voorkomen)
 exec --no-startup-id dex --autostart --environment i3
 
-# xss-lock grabs a logind suspend inhibit lock and will use i3lock to lock the screen
-exec --no-startup-id xss-lock --transfer-sleep-lock -- i3lock --nofork
+# Voorkom X11 screen blanking / DPMS monitor-off freezes in de VM
+exec_always --no-startup-id xset s off -dpms
 
 # NetworkManager applet
 exec --no-startup-id nm-applet
@@ -44,7 +47,7 @@ bindsym $mod+Return exec kitty
 bindsym $mod+q kill
 
 # AANGEPAST: start rofi met het juiste commando voor het applicatiemenu
-bindsym $mod+d exec --no-startup-id "rofi -show drun"
+bindsym $mod+space exec --no-startup-id "rofi -show drun"
 
 # change focus
 bindsym $mod+h focus left
@@ -88,7 +91,7 @@ bindsym $mod+e layout toggle split
 bindsym $mod+Shift+space floating toggle
 
 # change focus between tiling / floating windows
-bindsym $mod+space focus mode_toggle
+bindsym $mod+d focus mode_toggle
 
 # focus the parent container
 bindsym $mod+a focus parent

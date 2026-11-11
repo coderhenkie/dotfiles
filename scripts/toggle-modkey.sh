@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 
 I3_CONFIG="$HOME/dotfiles/i3/config"
+export DISPLAY="${DISPLAY:-:0}"
+if [ -z "${I3SOCK:-}" ]; then
+    I3SOCK=$(ls "/run/user/$(id -u)/i3/"ipc-socket.* 2>/dev/null | head -n 1 || true)
+    [ -n "$I3SOCK" ] && export I3SOCK
+fi
 
 # Controleer of we in de Mod4 (Win) of Mod1 (Alt) state zitten
 if grep -Fq 'set $mod Mod4' "$I3_CONFIG"; then

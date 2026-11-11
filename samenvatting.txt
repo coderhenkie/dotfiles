@@ -40,7 +40,7 @@ Om de dynamische Color Engine te laten werken, zijn de volgende unieke wijziging
   - CapsLock en Escape zijn omgewisseld via `setxkbmap -option caps:swapescape`.
   - Bevat `exec_always --no-startup-id ~/.fehbg` om de laatst ingestelde wallpaper te herstellen.
   - Verwijzing naar `~/.cache/theme/i3.conf` voor dynamische vensterranden.
-  - Custom keybindings: `$mod+Shift+w` voor de AI-theme generator (`scripts/ai-theme.sh`), `$mod+t` voor de handmatige theme-selector (`scripts/theme-selector.sh`).
+  - Custom keybindings: `$mod+Shift+w` voor de AI-theme generator (`scripts/ai-theme.sh`), `$mod+t` voor de handmatige theme-selector (`scripts/theme-selector.sh`), en `$mod+m` voor het interactieve Rofi Hotkey-Menu (`scripts/hotkey-menu.sh`).
 - **Qutebrowser (`qutebrowser/config.py`)**: 
   - Laadt `config.load_autoconfig(False)` en leest de gegenereerde kleuren, dark mode (`c.colors.webpage.darkmode.enabled = True`) en ingebouwde adblocker uit `~/.cache/theme/qutebrowser.py`.
 - **Firefox ESR (`~/.mozilla/firefox/rice.default`)**:
@@ -71,6 +71,7 @@ Het centrale script `scripts/apply-theme.sh` berekent in pure Bash vanuit deze 3
 - **`scripts/ai-theme.sh`**: Roept Rofi aan om een wallpaper in `~/dotfiles/wallpapers/` te selecteren, gebruikt `feh` om deze in te stellen, `wal` om kleuren te genereren en geeft deze door aan `apply-theme.sh`.
 - **`scripts/theme-selector.sh`**: Laat via Rofi een vast thema uit `~/dotfiles/themes/` kiezen (`dracula.theme`, `tokyonight.theme`) en geeft de kleuren door aan `apply-theme.sh`.
 - **`scripts/toggle-modkey.sh`**: Wisselt de `$mod`-toets in `i3/config` tussen `Mod1` (Alt) en `Mod4` (Windows-toets) en herlaadt i3.
+- **`scripts/hotkey-menu.sh`**: Interactief Engelstalig Rofi-menu (`$mod+m`) met 2 compacte kolommen (sneltoets + korte omschrijving) waarmee je een actie selecteert en direct de gewenste nieuwe toetsencombinatie indrukt (live X11 key-capture via `libX11`, inclusief automatische conflict-swap, `i3 -C` validatie en live reload).
 
 ### 7. Huidige Status
 Het systeem is opgeschoond, vrij van code-duplicatie en `.bak`-bestanden, volledig getest en push-klaar voor GitHub.
