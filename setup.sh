@@ -75,6 +75,9 @@ if curl -fsSL "https://download.spotify.com/debian/pubkey_${SPOTIFY_KEY_ID}.gpg"
         # Spicetify needs write access to Spotify's app files to inject the Color Engine theme
         sudo chmod a+wr /usr/share/spotify
         sudo chmod -R a+wr /usr/share/spotify/Apps
+        # The package's postinst doesn't reliably register its launcher, so link it for Rofi ourselves
+        mkdir -p "$HOME/.local/share/applications"
+        ln -sf /usr/share/spotify/spotify.desktop "$HOME/.local/share/applications/spotify.desktop"
         echo "[OK] Spotify installed."
     else
         echo "[!] Spotify install failed (continuing setup)."
