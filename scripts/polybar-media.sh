@@ -6,8 +6,9 @@
 #   polybar-media.sh next|previous
 
 MAX_LEN=60
-ICON_PLAYING=""
-ICON_PAUSED=""
+# Nerd Font glyphs, written as escapes so editors/tools can't strip them
+ICON_PLAYING=$'\uf04b'   # nf-fa-play
+ICON_PAUSED=$'\uf04c'    # nf-fa-pause
 
 pick_player() {
     local players p status fallback=""
