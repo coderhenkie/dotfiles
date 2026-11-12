@@ -58,6 +58,32 @@ systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null ||
 echo "==> Installing applications & CLI tools (including JQ and NPM)..."
 sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc fastfetch thunar btop jq npm
 
+# --- SPOTIFY (official apt repo; installs /usr/share/applications/spotify.desktop so it shows up in Rofi) ---
+echo "==> Installing Spotify from the official repository..."
+sudo nala install -y gpg ca-certificates
+# Spotify rotates its signing key periodically: read the current key ID from the repo signature,
+# falling back to the last known one.
+SPOTIFY_KEY_ID=$(curl -fsSL https://repository.spotify.com/dists/stable/Release.gpg \
+    | gpg --list-packets 2>/dev/null | grep -oE 'keyid [0-9A-F]{16}' | head -n 1 | cut -d' ' -f2 || true)
+SPOTIFY_KEY_ID="${SPOTIFY_KEY_ID:-5384CE82BA52C83A}"
+sudo install -d -m 0755 /etc/apt/keyrings
+if curl -fsSL "https://download.spotify.com/debian/pubkey_${SPOTIFY_KEY_ID}.gpg" \
+    | sudo gpg --dearmor --yes -o /etc/apt/keyrings/spotify.gpg; then
+    echo "deb [signed-by=/etc/apt/keyrings/spotify.gpg] https://repository.spotify.com stable non-free" \
+        | sudo tee /etc/apt/sources.list.d/spotify.list >/dev/null
+    if sudo apt update && sudo nala install -y spotify-client; then
+        # Spicetify needs write access to Spotify's app files to inject the Color Engine theme
+        sudo chmod a+wr /usr/share/spotify
+        sudo chmod -R a+wr /usr/share/spotify/Apps
+        echo "[OK] Spotify installed."
+    else
+        echo "[!] Spotify install failed (continuing setup)."
+        sudo rm -f /etc/apt/sources.list.d/spotify.list
+    fi
+else
+    echo "[!] Could not fetch Spotify signing key (continuing setup)."
+fi
+
 # ==========================================
 # 4. AppImages: Neovim, Obsidian & Thorium Browser
 # ==========================================
@@ -222,6 +248,33 @@ echo " -> Installing Antigravity CLI..."
 curl -fsSL https://antigravity.google/cli/install.sh | bash
 echo "[OK] Antigravity CLI installed."
 
+# --- Spicetify (Spotify theming for the Color Engine) ---
+if [ ! -x "$HOME/.spicetify/spicetify" ]; then
+    echo " -> Fetching latest Spicetify release via GitHub API..."
+    SPICETIFY_URL=$(curl -s https://api.github.com/repos/spicetify/cli/releases/latest | jq -r '.assets[] | .browser_download_url' | grep 'linux-amd64\.tar\.gz$' | head -n 1)
+
+    if [ -n "$SPICETIFY_URL" ]; then
+        mkdir -p "$HOME/.spicetify"
+        curl -fsSL "$SPICETIFY_URL" | tar -xz -C "$HOME/.spicetify"
+        chmod +x "$HOME/.spicetify/spicetify"
+        echo "[OK] Spicetify installed."
+    else
+        echo "[!] Could not find Spicetify download URL."
+    fi
+else
+    echo "[OK] Spicetify is already installed."
+fi
+[ -x "$HOME/.spicetify/spicetify" ] && ln -sf "$HOME/.spicetify/spicetify" "$LOCAL_BIN/spicetify"
+
+# Spicetify requires Spotify's prefs file, which only exists after Spotify's first launch
+mkdir -p "$HOME/.config/spotify"
+[ -f "$HOME/.config/spotify/prefs" ] || touch "$HOME/.config/spotify/prefs"
+
+# --- Claude Code ---
+echo " -> Installing Claude Code..."
+curl -fsSL https://claude.ai/install.sh | bash
+echo "[OK] Claude Code installed."
+
 # ==========================================
 # 4.8 PATH configuration for ~/.local/bin
 # ==========================================
@@ -316,7 +369,7 @@ echo "==> Configuring LightDM GTK Greeter and light-locker for Color Engine..."
 bash "$DOTFILES_DIR/scripts/lockscreen-setup.sh"
 
 # ==========================================
-# 9. Color Engine Bootstrap & Live Reload (Including LightDM, Thorium, Neovim, Herdr & btop)
+# 9. Color Engine Bootstrap & Live Reload (Including LightDM, Thorium, Neovim, Herdr, btop & Spotify)
 # ==========================================
 echo "==> Generating default bootstrap theme in ~/.cache/theme..."
 CACHE_DIR="$HOME/.cache/theme"
