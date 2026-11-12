@@ -48,7 +48,7 @@ To support the dynamic Color Engine and smooth workflow, the following configura
   - `/usr/share/themes/ColorEngine` and `/usr/share/icons/ColorEngine` are owned by `$USER` with world-readable (`755`/`644`) permissions so `scripts/apply-theme.sh` and `scripts/lock.sh` can update the lock/login screen GTK3 CSS (`#panel_window`, `#login_window`, `#power_window`, `#prompt_entry`, `#login_button`, `3px` accent border, `4px` corner radius), dynamic folder/status icons, and active `feh` wallpaper (`~/.fehbg`) live in user-space without requiring `sudo`.
 - **Picom (`picom/picom.conf`)**:
   - Uses the fast `xrender` backend with `vsync = true`, rounded corners (`corner-radius = 4`, excluding docks and Polybar), and window shadows (excluding Polybar).
-  - Opacity settings: `inactive-opacity = 0.97`, `active-opacity = 1.0`, and per-application `opacity-rule` keeping Rofi and Polybar at `100%`, Kitty and Thunar at `87%`, and Thorium (`thorium`, `Thorium`, `thorium-browser`) at `97%`.
+  - Opacity settings: `inactive-opacity = 0.97`, `active-opacity = 1.0`, and per-application `opacity-rule` keeping Rofi and Polybar at `100%`, Kitty and Thunar at `92%`, and Thorium (`thorium`, `Thorium`, `thorium-browser`) at `97%`.
 - **Polybar (`polybar/config.ini` & `polybar/launch.sh`)**:
   - Dual-bar layout (`bar/top` and `bar/bottom`) launched cleanly via `setsid` in `polybar/launch.sh`, sourcing colors from `~/.cache/theme/polybar.ini`.
   - **Top Bar (`bar/top`)**: Displays i3 workspaces (with `5px` padding and `1px` margin spacing), active window title (`xwindow`), date/time, and system tray.
