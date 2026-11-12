@@ -56,7 +56,7 @@ sudo nala install -y pipewire pipewire-pulse pipewire-alsa wireplumber pulseaudi
 systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null || true
 
 echo "==> Installing applications & CLI tools (including JQ and NPM)..."
-sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc fastfetch thunar btop jq npm
+sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc fastfetch thunar btop jq npm playerctl
 
 # --- SPOTIFY (official apt repo; installs /usr/share/applications/spotify.desktop so it shows up in Rofi) ---
 echo "==> Installing Spotify from the official repository..."
