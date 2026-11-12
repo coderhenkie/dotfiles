@@ -51,6 +51,10 @@ echo "==> Installing Xorg and LightDM..."
 sudo nala install -y xserver-xorg xinit lightdm lightdm-gtk-greeter light-locker
 sudo systemctl enable lightdm
 
+echo "==> Installing audio stack (PipeWire + WirePlumber, Pulse/ALSA compatibility, SOF firmware)..."
+sudo nala install -y pipewire pipewire-pulse pipewire-alsa wireplumber pulseaudio-utils alsa-utils pavucontrol firmware-sof-signed
+systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null || true
+
 echo "==> Installing applications & CLI tools (including JQ and NPM)..."
 sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc fastfetch thunar btop jq npm
 
@@ -228,10 +232,11 @@ if ! grep -q "$HOME/.local/bin" "$HOME/.bashrc"; then
 fi
 
 # ==========================================
-# 5. Install Nerd Fonts
+# 5. Install Nerd Fonts (User & System-wide for LightDM)
 # ==========================================
 echo "==> Installing JetBrainsMono Nerd Font..."
 FONT_DIR="$HOME/.local/share/fonts"
+SYS_FONT_DIR="/usr/local/share/fonts/JetBrainsMono"
 
 if [ ! -d "$FONT_DIR/JetBrainsMono" ]; then
     mkdir -p "$FONT_DIR/JetBrainsMono"
@@ -239,7 +244,15 @@ if [ ! -d "$FONT_DIR/JetBrainsMono" ]; then
     unzip -qo /tmp/JetBrainsMono.zip -d "$FONT_DIR/JetBrainsMono"
     rm /tmp/JetBrainsMono.zip
     fc-cache -fv
-    echo "[OK] Font installed."
+    echo "[OK] Font installed in ~/.local/share/fonts."
+fi
+
+if [ ! -d "$SYS_FONT_DIR" ]; then
+    sudo mkdir -p "$SYS_FONT_DIR"
+    sudo cp -rf "$FONT_DIR/JetBrainsMono/"* "$SYS_FONT_DIR/"
+    sudo chmod -R a+rX "$SYS_FONT_DIR"
+    sudo fc-cache -fv
+    echo "[OK] Font installed system-wide for LightDM."
 fi
 
 # ==========================================
@@ -279,10 +292,13 @@ done
 if [ ! -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && [ -f "$DOTFILES_DIR/i3/hotkeys.default" ]; then
     cp "$DOTFILES_DIR/i3/hotkeys.default" "$DOTFILES_DIR/i3/hotkeys.conf"
     echo "[OK] Initialized i3/hotkeys.conf from hotkeys.default."
+elif [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/lock.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/hotkey-menu\.sh/a bindsym $mod+Shift+x exec --no-startup-id ~/dotfiles/scripts/lock.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Added screen lock hotkey (\$mod+Shift+x) to existing i3/hotkeys.conf."
 fi
 
 # ==========================================
-# 8. Set Executable Permissions
+# 8. Set Executable Permissions & Screen Lock CLI
 # ==========================================
 echo "==> Setting executable permissions on scripts..."
 
@@ -291,9 +307,16 @@ if [ -f "$DOTFILES_DIR/polybar/launch.sh" ]; then
 fi
 
 chmod +x "$DOTFILES_DIR/scripts/"*.sh
+ln -sf "$DOTFILES_DIR/scripts/lock.sh" "$LOCAL_BIN/lock"
 
 # ==========================================
-# 9. Color Engine Bootstrap & Live Reload (Including Thorium, Neovim, Herdr & btop)
+# 8.5 LightDM & light-locker Color Engine Integration
+# ==========================================
+echo "==> Configuring LightDM GTK Greeter and light-locker for Color Engine..."
+bash "$DOTFILES_DIR/scripts/lockscreen-setup.sh"
+
+# ==========================================
+# 9. Color Engine Bootstrap & Live Reload (Including LightDM, Thorium, Neovim, Herdr & btop)
 # ==========================================
 echo "==> Generating default bootstrap theme in ~/.cache/theme..."
 CACHE_DIR="$HOME/.cache/theme"

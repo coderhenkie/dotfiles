@@ -83,6 +83,7 @@ describe_action() {
         *theme-selector.sh*) echo "${prefix}Theme selector" ;;
         *ai-theme.sh*)       echo "${prefix}AI wallpaper theme" ;;
         *hotkey-menu.sh*)    echo "${prefix}Hotkey menu" ;;
+        *lock.sh*)           echo "${prefix}Lock screen" ;;
         *toggle-modkey.sh*)  echo "${prefix}Switch Mod key" ;;
         "exec kitty")        echo "${prefix}Open terminal" ;;
         "kill")              echo "${prefix}Close window" ;;

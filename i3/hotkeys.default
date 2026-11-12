@@ -12,10 +12,11 @@ floating_modifier $mod
 # Move tiling windows via drag & drop by left-clicking into the title bar
 tiling_drag modifier titlebar
 
-# Custom Rofi Menus & Theme Engine
+# Custom Rofi Menus, Theme Engine & Screen Lock
 bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/scripts/theme-selector.sh
 bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
 bindsym $mod+m exec --no-startup-id ~/dotfiles/scripts/hotkey-menu.sh
+bindsym $mod+Shift+x exec --no-startup-id ~/dotfiles/scripts/lock.sh
 
 # Volume controls (managed via PulseAudio / PipeWire; Polybar handles status display)
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +10%
