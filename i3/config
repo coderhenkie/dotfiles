@@ -24,8 +24,11 @@ gaps outer 1
 # Start XDG autostart .desktop files using dex
 exec --no-startup-id dex --autostart --environment i3
 
-# Prevent X11 screen blanking / DPMS monitor-off freezes in the VM
-exec_always --no-startup-id xset s off -dpms
+# Ensure light-locker daemon is running for session and idle locking
+exec_always --no-startup-id sh -c 'pgrep -x light-locker >/dev/null || light-locker --lock-after-screensaver=5 --no-late-locking --lock-on-suspend &'
+
+# Enable automatic idle lock after 5 minutes (300s) while keeping DPMS monitor power-off disabled in the VM
+exec_always --no-startup-id xset s 300 5 -dpms
 
 # NetworkManager applet
 exec --no-startup-id nm-applet
