@@ -1,0 +1,4 @@
+# Saved monitor profiles are machine-specific (autorandr --save <name>); only hooks are tracked
+*
+!.gitignore
+!postswitch

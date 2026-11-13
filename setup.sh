@@ -56,9 +56,89 @@ sudo nala install -y pipewire pipewire-pulse pipewire-alsa wireplumber pulseaudi
 systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null || true
 
 echo "==> Installing applications & CLI tools (including JQ and NPM)..."
-sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc fastfetch thunar btop jq npm playerctl maim xclip xdg-user-dirs dunst libnotify-bin yad
+sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc fastfetch thunar btop jq playerctl maim xclip xdg-user-dirs dunst libnotify-bin yad
 
 # --- SPOTIFY (official apt repo; installs /usr/share/applications/spotify.desktop so it shows up in Rofi) ---
+# ==========================================
+# 3.5 Desktop Essentials
+# ==========================================
+echo "==> Installing desktop essentials (network, polkit, viewers, archives, Rofi tools, displays, backups)..."
+# network-manager(-gnome): Wi-Fi/VPN + nm-applet tray icon   mate-polkit: GUI password prompts (pkexec)
+# zathura/imv/mpv: PDF, image & media viewers               thunar-archive-plugin/xarchiver: "Extract here"
+# gvfs-backends: phones (MTP), SMB/SFTP shares in Thunar     qalc/xdotool/unicode-data/noto emoji: Rofi tools
+# autorandr/arandr: monitor profiles & layout GUI            timeshift: system snapshots
+# earlyoom/zram-tools: low-memory protection
+sudo nala install -y \
+    network-manager network-manager-gnome mate-polkit \
+    zathura zathura-pdf-poppler imv mpv \
+    thunar-archive-plugin xarchiver gvfs-backends \
+    qalc xdotool unicode-data fonts-noto-color-emoji \
+    autorandr arandr timeshift \
+    earlyoom zram-tools
+
+# ukui-polkit gets pulled in as a polkit agent but only starts inside UKUI/MATE; mate-polkit replaces it
+if dpkg -s ukui-polkit >/dev/null 2>&1; then
+    sudo apt-get remove -y ukui-polkit
+fi
+
+# Compressed swap in RAM (zstd, up to 50% of RAM) so memory spikes don't hit the disk
+printf 'ALGO=zstd\nPERCENT=50\nPRIORITY=100\n' | sudo tee /etc/default/zramswap >/dev/null
+sudo systemctl enable zramswap >/dev/null 2>&1 || true
+sudo systemctl restart zramswap || echo "[!] zramswap could not be started (continuing setup)."
+
+# earlyoom: kill the biggest browser/Electron process before the whole desktop freezes.
+# (No quotes inside EARLYOOM_ARGS: systemd splits it on spaces and passes quotes literally.)
+echo 'EARLYOOM_ARGS="-r 3600 --prefer ^(thorium|chrome|obsidian|spotify)$ --avoid ^(init|systemd|Xorg|i3|polybar|lightdm|sshd|dunst|kitty)$"' \
+    | sudo tee /etc/default/earlyoom >/dev/null
+sudo systemctl enable earlyoom >/dev/null 2>&1 || true
+sudo systemctl restart earlyoom || echo "[!] earlyoom could not be started (continuing setup)."
+
+# --- Laptop only: battery power management (TLP) ---
+if ls -d /sys/class/power_supply/BAT* >/dev/null 2>&1; then
+    echo "==> Battery detected: installing TLP power management..."
+    sudo nala install -y tlp
+    sudo systemctl enable --now tlp
+else
+    echo "[OK] No battery detected: skipping TLP."
+fi
+
+# --- Bluetooth only when the machine has a Bluetooth controller ---
+# /sys/class/bluetooth lists loaded controllers; USB class e0/01/01 catches adapters without a loaded driver.
+HAS_BLUETOOTH=0
+[ -n "$(ls -A /sys/class/bluetooth 2>/dev/null)" ] && HAS_BLUETOOTH=1
+for usb_if in /sys/bus/usb/devices/*:*; do
+    [ "$(cat "$usb_if/bInterfaceClass" 2>/dev/null)$(cat "$usb_if/bInterfaceSubClass" 2>/dev/null)$(cat "$usb_if/bInterfaceProtocol" 2>/dev/null)" = "e00101" ] && HAS_BLUETOOTH=1
+done
+if [ "$HAS_BLUETOOTH" = 1 ]; then
+    echo "==> Bluetooth controller detected: installing BlueZ + Blueman (tray applet starts at login)..."
+    sudo nala install -y bluez blueman
+    sudo systemctl enable --now bluetooth
+else
+    echo "[OK] No Bluetooth controller detected: skipping Bluetooth."
+fi
+
+# --- Bare metal only: firmware updates (BIOS, SSD, peripherals) via LVFS ---
+if systemd-detect-virt -q; then
+    echo "[OK] Virtual machine detected: skipping fwupd."
+else
+    echo "==> Bare metal detected: installing fwupd (run 'fwupdmgr get-updates' to check firmware)..."
+    sudo nala install -y fwupd
+fi
+
+# NetworkManager leaves interfaces listed in /etc/network/interfaces to ifupdown, so a wired/SSH
+# connection configured by the Debian installer keeps working. Wi-Fi configured there is NOT
+# managed by nm-applet; it is never changed automatically because that could cut the connection.
+if grep -qsE '^[[:space:]]*(auto|allow-hotplug|iface)[[:space:]]+wl' /etc/network/interfaces /etc/network/interfaces.d/*; then
+    echo "[!] Wi-Fi is configured in /etc/network/interfaces, so nm-applet cannot manage it."
+    echo "    To hand it to NetworkManager: comment out the wl* lines there and reboot (do this locally, not over SSH)."
+fi
+
+echo "==> Enabling automatic security updates (unattended-upgrades)..."
+sudo nala install -y unattended-upgrades
+# Daily package list refresh + unattended upgrade run (Debian security & stable point releases)
+printf 'APT::Periodic::Update-Package-Lists "1";\nAPT::Periodic::Unattended-Upgrade "1";\n' \
+    | sudo tee /etc/apt/apt.conf.d/20auto-upgrades >/dev/null
+
 echo "==> Installing Spotify from the official repository..."
 sudo nala install -y gpg ca-certificates
 # Spotify rotates its signing key periodically: read the current key ID from the repo signature,
@@ -72,9 +152,10 @@ if curl -fsSL "https://download.spotify.com/debian/pubkey_${SPOTIFY_KEY_ID}.gpg"
     echo "deb [signed-by=/etc/apt/keyrings/spotify.gpg] https://repository.spotify.com stable non-free" \
         | sudo tee /etc/apt/sources.list.d/spotify.list >/dev/null
     if sudo apt update && sudo nala install -y spotify-client; then
-        # Spicetify needs write access to Spotify's app files to inject the Color Engine theme
-        sudo chmod a+wr /usr/share/spotify
-        sudo chmod -R a+wr /usr/share/spotify/Apps
+        # Spicetify needs write access to Spotify's app files to inject the Color Engine theme.
+        # Give that access to the desktop user only (never world-writable: any process could swap the binary).
+        sudo chown -R "$USER:$USER" /usr/share/spotify
+        sudo chmod -R u+rwX,go+rX,go-w /usr/share/spotify
         # The package's postinst doesn't reliably register its launcher, so link it for Rofi ourselves
         mkdir -p "$HOME/.local/share/applications"
         ln -sf /usr/share/spotify/spotify.desktop "$HOME/.local/share/applications/spotify.desktop"
@@ -97,36 +178,45 @@ LOCAL_BIN="$HOME/.local/bin"
 mkdir -p "$APPIMAGE_DIR"
 mkdir -p "$LOCAL_BIN"
 
+# Every GitHub download below is verified against GitHub's published SHA-256 checksum
+# shellcheck source=scripts/lib/github-download.sh
+source "$DOTFILES_DIR/scripts/lib/github-download.sh"
+
 # --- NEOVIM ---
 if [ ! -f "$APPIMAGE_DIR/nvim.appimage" ]; then
     echo " -> Downloading Neovim..."
-    curl -LO https://github.com/neovim/neovim/releases/latest/download/nvim-linux-x86_64.appimage
-    chmod u+x nvim-linux-x86_64.appimage
-    mv nvim-linux-x86_64.appimage "$APPIMAGE_DIR/nvim.appimage"
-    ln -sf "$APPIMAGE_DIR/nvim.appimage" "$LOCAL_BIN/nvim"
-    echo "[OK] Neovim installed."
+    if gh_install_latest "neovim/neovim" '^nvim-linux-x86_64\.appimage$' "$APPIMAGE_DIR/nvim.appimage"; then
+        chmod u+x "$APPIMAGE_DIR/nvim.appimage"
+        ln -sf "$APPIMAGE_DIR/nvim.appimage" "$LOCAL_BIN/nvim"
+        echo "[OK] Neovim installed."
+    else
+        echo "[!] Neovim could not be installed (continuing setup)."
+    fi
 else
     echo "[OK] Neovim is already installed."
 fi
 
 # --- OBSIDIAN (LATEST, NO ARM64) ---
 if [ ! -f "$APPIMAGE_DIR/obsidian.appimage" ]; then
-    echo " -> Fetching latest Obsidian release via GitHub API..."
-    OBSIDIAN_URL=$(curl -s https://api.github.com/repos/obsidianmd/obsidian-releases/releases/latest | jq -r '.assets[] | .browser_download_url' | grep '\.AppImage$' | grep -v 'arm64' | head -n 1)
-
-    if [ -n "$OBSIDIAN_URL" ]; then
-        curl -LO "$OBSIDIAN_URL"
-        OBS_APPIMAGE=$(basename "$OBSIDIAN_URL")
-        chmod u+x "$OBS_APPIMAGE"
-        mv "$OBS_APPIMAGE" "$APPIMAGE_DIR/obsidian.appimage"
+    echo " -> Fetching latest Obsidian release (checksum-verified)..."
+    if gh_install_latest "obsidianmd/obsidian-releases" '^Obsidian-[0-9.]+\.AppImage$' "$APPIMAGE_DIR/obsidian.appimage"; then
+        chmod u+x "$APPIMAGE_DIR/obsidian.appimage"
         ln -sf "$APPIMAGE_DIR/obsidian.appimage" "$LOCAL_BIN/obsidian"
+        echo "[OK] Obsidian installed."
+    else
+        echo "[!] Obsidian could not be installed (continuing setup)."
+    fi
+else
+    echo "[OK] Obsidian is already installed."
+fi
 
-        # Create the .desktop entry for Rofi (with --no-sandbox flag)
-        mkdir -p "$HOME/.local/share/applications"
-        cat <<EOF > "$HOME/.local/share/applications/obsidian.desktop"
+# Create the .desktop entry for Rofi. No --no-sandbox: Debian 13 allows unprivileged user
+# namespaces, so Electron's sandbox works inside the AppImage.
+mkdir -p "$HOME/.local/share/applications"
+cat <<EOF > "$HOME/.local/share/applications/obsidian.desktop"
 [Desktop Entry]
 Name=Obsidian
-Exec=$HOME/.local/bin/obsidian --no-sandbox %U
+Exec=$HOME/.local/bin/obsidian %U
 Terminal=false
 Type=Application
 Icon=obsidian
@@ -134,37 +224,10 @@ StartupWMClass=obsidian
 Comment=Obsidian Markdown Note-taking
 Categories=Office;
 EOF
-        echo "[OK] Obsidian installed and added to Rofi."
-    else
-        echo "[!] Could not find Obsidian download URL."
-    fi
-else
-    echo "[OK] Obsidian is already installed."
-fi
 
-# --- THORIUM BROWSER (LATEST AVX2 / SSE4 APPIMAGE + EXTENSIONS + GTK THEME) ---
-if [ ! -f "$APPIMAGE_DIR/thorium.appimage" ]; then
-    echo " -> Fetching latest Thorium Browser release via GitHub API..."
-    if grep -q "avx2" /proc/cpuinfo 2>/dev/null; then
-        THORIUM_ISA="AVX2"
-    else
-        THORIUM_ISA="SSE4"
-    fi
-
-    THORIUM_URL=$(curl -s "https://api.github.com/repos/Alex313031/Thorium/releases?per_page=15" | jq -r '[.[] | select((.assets | length) > 0)][0].assets[] | .browser_download_url' | grep '\.AppImage$' | grep "_${THORIUM_ISA}\." | head -n 1)
-
-    if [ -n "$THORIUM_URL" ]; then
-        curl -L -o "$APPIMAGE_DIR/thorium.appimage" "$THORIUM_URL"
-        chmod u+x "$APPIMAGE_DIR/thorium.appimage"
-        ln -sf "$APPIMAGE_DIR/thorium.appimage" "$LOCAL_BIN/thorium"
-        echo "[OK] Thorium Browser ($THORIUM_ISA) installed."
-    else
-        echo "[!] Could not find Thorium Browser download URL."
-    fi
-else
-    echo "[OK] Thorium Browser is already installed."
-    ln -sf "$APPIMAGE_DIR/thorium.appimage" "$LOCAL_BIN/thorium"
-fi
+# --- THORIUM BROWSER (NEWEST VERIFIED AVX2 / SSE4 APPIMAGE + EXTENSIONS + GTK THEME) ---
+# update-thorium.sh installs or updates to the newest checksum-verified build (also runs at i3 login)
+bash "$DOTFILES_DIR/scripts/update-thorium.sh" || echo "[!] Thorium could not be installed/updated (continuing setup)."
 
 # Create the .desktop entry for Thorium in Rofi
 mkdir -p "$HOME/.local/share/applications"
@@ -254,16 +317,16 @@ echo "[OK] Antigravity CLI installed."
 # --- Spicetify (Spotify theming for the Color Engine) ---
 if [ ! -x "$HOME/.spicetify/spicetify" ]; then
     echo " -> Fetching latest Spicetify release via GitHub API..."
-    SPICETIFY_URL=$(curl -s https://api.github.com/repos/spicetify/cli/releases/latest | jq -r '.assets[] | .browser_download_url' | grep 'linux-amd64\.tar\.gz$' | head -n 1)
-
-    if [ -n "$SPICETIFY_URL" ]; then
+    SPICETIFY_TGZ=$(mktemp -d)/spicetify.tar.gz
+    if gh_install_latest "spicetify/cli" '^spicetify-[0-9.]+-linux-amd64\.tar\.gz$' "$SPICETIFY_TGZ"; then
         mkdir -p "$HOME/.spicetify"
-        curl -fsSL "$SPICETIFY_URL" | tar -xz -C "$HOME/.spicetify"
+        tar -xzf "$SPICETIFY_TGZ" -C "$HOME/.spicetify"
         chmod +x "$HOME/.spicetify/spicetify"
         echo "[OK] Spicetify installed."
     else
-        echo "[!] Could not find Spicetify download URL."
+        echo "[!] Spicetify could not be installed (continuing setup)."
     fi
+    rm -rf "$(dirname "$SPICETIFY_TGZ")"
 else
     echo "[OK] Spicetify is already installed."
 fi
@@ -295,12 +358,16 @@ FONT_DIR="$HOME/.local/share/fonts"
 SYS_FONT_DIR="/usr/local/share/fonts/JetBrainsMono"
 
 if [ ! -d "$FONT_DIR/JetBrainsMono" ]; then
-    mkdir -p "$FONT_DIR/JetBrainsMono"
-    wget -qO /tmp/JetBrainsMono.zip https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
-    unzip -qo /tmp/JetBrainsMono.zip -d "$FONT_DIR/JetBrainsMono"
-    rm /tmp/JetBrainsMono.zip
-    fc-cache -fv
-    echo "[OK] Font installed in ~/.local/share/fonts."
+    FONT_ZIP=$(mktemp -d)/JetBrainsMono.zip
+    if gh_install_latest "ryanoasis/nerd-fonts" '^JetBrainsMono\.zip$' "$FONT_ZIP"; then
+        mkdir -p "$FONT_DIR/JetBrainsMono"
+        unzip -qo "$FONT_ZIP" -d "$FONT_DIR/JetBrainsMono"
+        fc-cache -f
+        echo "[OK] Font installed in ~/.local/share/fonts."
+    else
+        echo "[!] JetBrainsMono Nerd Font could not be installed (continuing setup)."
+    fi
+    rm -rf "$(dirname "$FONT_ZIP")"
 fi
 
 if [ ! -d "$SYS_FONT_DIR" ]; then
@@ -329,7 +396,7 @@ echo "==> Creating symlinks for configuration directories..."
 CONFIG_DIR="$HOME/.config"
 mkdir -p "$CONFIG_DIR"
 
-APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "btop" "dunst")
+APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "btop" "dunst" "zathura" "autorandr")
 
 for app in "${APPS[@]}"; do
     TARGET_DIR="$CONFIG_DIR/$app"
@@ -365,6 +432,20 @@ if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/notifications.s
     echo "[OK] Added notification hotkeys (\$mod+n / \$mod+Shift+n) to existing i3/hotkeys.conf."
 fi
 
+# Migrate existing hotkeys.conf files: power menu replaces the i3-nagbar exit prompt
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/power-menu.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i 's|^bindsym \$mod+Shift+e exec "i3-nagbar.*$|bindsym $mod+Shift+e exec --no-startup-id ~/dotfiles/scripts/power-menu.sh|' "$DOTFILES_DIR/i3/hotkeys.conf"
+    grep -Fq "scripts/power-menu.sh" "$DOTFILES_DIR/i3/hotkeys.conf" \
+        || echo 'bindsym $mod+Shift+e exec --no-startup-id ~/dotfiles/scripts/power-menu.sh' >> "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Power menu bound to \$mod+Shift+e in existing i3/hotkeys.conf."
+fi
+
+# Migrate existing hotkeys.conf files: add the Rofi tools (clipboard, calculator, emoji) once
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/clipboard.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/scripts\/lock\.sh/a bindsym $mod+c exec --no-startup-id ~/dotfiles/scripts/clipboard.sh menu\nbindsym $mod+equal exec --no-startup-id ~/dotfiles/scripts/calculator.sh\nbindsym $mod+Shift+period exec --no-startup-id ~/dotfiles/scripts/emoji.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Added clipboard (\$mod+c), calculator (\$mod+equal) and emoji (\$mod+Shift+period) hotkeys to existing i3/hotkeys.conf."
+fi
+
 # ==========================================
 # 8. Set Executable Permissions & Screen Lock CLI
 # ==========================================
@@ -375,7 +456,11 @@ if [ -f "$DOTFILES_DIR/polybar/launch.sh" ]; then
 fi
 
 chmod +x "$DOTFILES_DIR/scripts/"*.sh
+[ -f "$DOTFILES_DIR/autorandr/postswitch" ] && chmod +x "$DOTFILES_DIR/autorandr/postswitch"
 ln -sf "$DOTFILES_DIR/scripts/lock.sh" "$LOCAL_BIN/lock"
+
+echo "==> Setting default applications (Thorium, Zathura, imv, mpv, Thunar)..."
+bash "$DOTFILES_DIR/scripts/default-apps.sh"
 
 # ==========================================
 # 8.5 LightDM & light-locker Color Engine Integration
