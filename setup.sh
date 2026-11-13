@@ -182,19 +182,23 @@ mkdir -p "$LOCAL_BIN"
 # shellcheck source=scripts/lib/github-download.sh
 source "$DOTFILES_DIR/scripts/lib/github-download.sh"
 
-# --- NEOVIM ---
-if [ ! -f "$APPIMAGE_DIR/nvim.appimage" ]; then
-    echo " -> Downloading Neovim..."
-    if gh_install_latest "neovim/neovim" '^nvim-linux-x86_64\.appimage$' "$APPIMAGE_DIR/nvim.appimage"; then
+# --- NEOVIM (install, or update when a newer release exists) ---
+NVIM_CURRENT=""
+[ -x "$APPIMAGE_DIR/nvim.appimage" ] && NVIM_CURRENT=$("$APPIMAGE_DIR/nvim.appimage" --version 2>/dev/null | head -n 1 | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' || true)
+if gh_check_update "neovim/neovim" '^nvim-linux-x86_64\.appimage$' "$NVIM_CURRENT"; then
+    echo " -> Installing Neovim $GH_LATEST_VERSION (installed: ${NVIM_CURRENT:-none})..."
+    if gh_download_verified "$GH_URL" "$GH_DIGEST" "$APPIMAGE_DIR/nvim.appimage"; then
         chmod u+x "$APPIMAGE_DIR/nvim.appimage"
-        ln -sf "$APPIMAGE_DIR/nvim.appimage" "$LOCAL_BIN/nvim"
-        echo "[OK] Neovim installed."
+        echo "[OK] Neovim $GH_LATEST_VERSION installed."
     else
-        echo "[!] Neovim could not be installed (continuing setup)."
+        echo "[!] Neovim could not be installed/updated (continuing setup)."
     fi
+elif [ $? -eq 1 ]; then
+    echo "[OK] Neovim is up to date ($NVIM_CURRENT)."
 else
-    echo "[OK] Neovim is already installed."
+    echo "[!] Could not check for Neovim updates (offline or GitHub API limit)."
 fi
+[ -x "$APPIMAGE_DIR/nvim.appimage" ] && ln -sf "$APPIMAGE_DIR/nvim.appimage" "$LOCAL_BIN/nvim"
 
 # --- OBSIDIAN (LATEST, NO ARM64) ---
 if [ ! -f "$APPIMAGE_DIR/obsidian.appimage" ]; then
@@ -315,20 +319,25 @@ curl -fsSL https://antigravity.google/cli/install.sh | bash
 echo "[OK] Antigravity CLI installed."
 
 # --- Spicetify (Spotify theming for the Color Engine) ---
-if [ ! -x "$HOME/.spicetify/spicetify" ]; then
-    echo " -> Fetching latest Spicetify release via GitHub API..."
+SPICETIFY_CURRENT=""
+[ -x "$HOME/.spicetify/spicetify" ] && SPICETIFY_CURRENT=$("$HOME/.spicetify/spicetify" -v 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)
+if gh_check_update "spicetify/cli" '^spicetify-[0-9.]+-linux-amd64\.tar\.gz$' "$SPICETIFY_CURRENT"; then
+    echo " -> Installing Spicetify $GH_LATEST_VERSION (installed: ${SPICETIFY_CURRENT:-none})..."
     SPICETIFY_TGZ=$(mktemp -d)/spicetify.tar.gz
-    if gh_install_latest "spicetify/cli" '^spicetify-[0-9.]+-linux-amd64\.tar\.gz$' "$SPICETIFY_TGZ"; then
+    if gh_download_verified "$GH_URL" "$GH_DIGEST" "$SPICETIFY_TGZ"; then
+        # Themes & config live in ~/.config/spicetify, so replacing the program files is safe
         mkdir -p "$HOME/.spicetify"
         tar -xzf "$SPICETIFY_TGZ" -C "$HOME/.spicetify"
         chmod +x "$HOME/.spicetify/spicetify"
-        echo "[OK] Spicetify installed."
+        echo "[OK] Spicetify $GH_LATEST_VERSION installed."
     else
-        echo "[!] Spicetify could not be installed (continuing setup)."
+        echo "[!] Spicetify could not be installed/updated (continuing setup)."
     fi
     rm -rf "$(dirname "$SPICETIFY_TGZ")"
+elif [ $? -eq 1 ]; then
+    echo "[OK] Spicetify is up to date ($SPICETIFY_CURRENT)."
 else
-    echo "[OK] Spicetify is already installed."
+    echo "[!] Could not check for Spicetify updates (offline or GitHub API limit)."
 fi
 [ -x "$HOME/.spicetify/spicetify" ] && ln -sf "$HOME/.spicetify/spicetify" "$LOCAL_BIN/spicetify"
 
@@ -386,7 +395,7 @@ sudo nala install -y python3-pip python3-venv imagemagick
 
 echo "==> Creating virtual environment for Pywal in ~/.local/pywal-venv..."
 python3 -m venv "$HOME/.local/pywal-venv"
-"$HOME/.local/pywal-venv/bin/pip" install pywal
+"$HOME/.local/pywal-venv/bin/pip" install --upgrade pip pywal
 ln -sf "$HOME/.local/pywal-venv/bin/wal" "$LOCAL_BIN/wal"
 
 # ==========================================
