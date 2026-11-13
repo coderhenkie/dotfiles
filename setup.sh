@@ -475,6 +475,12 @@ if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/notifications.s
     echo "[OK] Added notification hotkeys (\$mod+n / \$mod+Shift+n) to existing i3/hotkeys.conf."
 fi
 
+# Migrate existing hotkeys.conf files: volume keys step 5% instead of 10%
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && grep -Fq 'set-sink-volume @DEFAULT_SINK@ +10%' "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i 's/set-sink-volume @DEFAULT_SINK@ +10%/set-sink-volume @DEFAULT_SINK@ +5%/; s/set-sink-volume @DEFAULT_SINK@ -10%/set-sink-volume @DEFAULT_SINK@ -5%/' "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Volume keys now step 5% in existing i3/hotkeys.conf."
+fi
+
 # Migrate existing hotkeys.conf files: power menu replaces the i3-nagbar exit prompt
 if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/power-menu.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
     sed -i 's|^bindsym \$mod+Shift+e exec "i3-nagbar.*$|bindsym $mod+Shift+e exec --no-startup-id ~/dotfiles/scripts/power-menu.sh|' "$DOTFILES_DIR/i3/hotkeys.conf"

@@ -73,10 +73,10 @@ To support the dynamic Color Engine and smooth workflow, the following configura
   - **Bottom Bar (`bar/bottom`)**: Live system telemetry modules:
     - `filesystem`: Queries real mounted filesystems every 5s via `scripts/polybar-disk.sh` (`df -B1 --total` (excluding `tmpfs`, `devtmpfs`, `efivarfs`, `squashfs`, `overlay`), displaying `%used (used GB/total GB)`.
     - `network`: Universal local IPv4 detection every 3s via `scripts/polybar-ip.sh` (`ip -4 route get 1.1.1.1` (with `hostname -I` fallback), supporting both Wi-Fi and wired Ethernet interfaces on baremetal and VMs.
-    - `cpu` & `memory`: Live CPU load and RAM usage (`%percentage_used% (%gb_used%)`).
+    - `cpu` & `memory`: Live CPU load and RAM usage; RAM via `scripts/polybar-memory.sh` (`used% (used GB)`, MemTotal − MemAvailable, same GB units as the disk module).
     - `gpu` (`scripts/polybar-gpu.sh`): Multi-vendor GPU load monitor supporting NVIDIA (`nvidia-smi`), AMD (`gpu_busy_percent`), and Intel (`i915`/`xe` via RC6 idle residency delta and frequency scaling), using `systemd-detect-virt --vm` so `0% (VM)` is only shown inside virtual machines and `0%` on idle baremetal.
     - `notifications` (`scripts/notifications.sh status`): Bell icon only (crossed-out bell in silent mode, plus the number of held notifications when there are any); left-click toggles silent mode, right-click opens the notification menu.
-    - `pulseaudio` & `battery`: Volume status and dynamic battery capacity/status (falling back to `100% (AC)` on desktop/VM).
+    - `pulseaudio` & `battery`: Volume status (scrolling steps 5%, same as the volume keys in `i3/hotkeys.default`) and dynamic battery capacity/status (falling back to `100% (AC)` on desktop/VM).
 - **Thorium Browser (`~/appimages/thorium.appimage` & `~/.config/thorium/`)**:
   - Automatically downloads and keeps updated the latest versions of 4 Chrome Web Store extensions via `ExtensionInstallForcelist` (`/etc/chromium/policies/managed/thorium_extensions.json`) and `~/.config/thorium/External Extensions/`:
     1. `dahfohiipmpcppjbablgfoggbogdmddp` (*Thorium Material Dark Theme*)
@@ -103,6 +103,7 @@ To support the dynamic Color Engine and smooth workflow, the following configura
   - Minimal notifications in the bottom-right corner just above the bottom Polybar (`offset = (10, 37)`), `2px` accent frame, `4px` corners, Iosevka Nerd Font, image thumbnails (e.g. screenshots), click to dismiss.
   - Per-app muting lives in `dunstrc.d/50-muted-apps.conf` (machine-local, managed by `scripts/notifications.sh`): muted apps get a `skip_display` rule, so they never pop up but stay in the history.
   - Colors live in `~/.config/dunst/dunstrc.d/99-color-engine.conf` (symlink to `~/.cache/theme/dunst.conf`, ignored in Git via `dunst/.gitignore`) and reload via `dunstctl reload`.
+- **Rofi icon pack (`rofi/app-icons.conf` + `scripts/rofi-icons.sh`)**: Minimal single-colour app icons. Every app Rofi shows gets a Material Design glyph from Iosevka Nerd Font (chosen by icon name, then by `.desktop` category, then a default), rendered as 128px PNGs in the Color Engine `ACCENT_SOFT` colour into the `ColorEngine-Apps` icon theme (`~/.local/share/icons/ColorEngine-Apps`, set via `icon-theme` in `rofi/config.rasi`). `apply-theme.sh` re-renders them on every theme change (skipped when nothing changed). Add or change an app's glyph in `rofi/app-icons.conf`.
 - **Rofi & Kitty**: Configured with `@import` and `include` statements pointing to `~/.cache/theme/`. Rofi (`rofi/theme.rasi`) styles both the list view and message/prompt bars (`message`, `textbox`) using Color Engine variables. Kitty (`kitty/kitty.conf`) uses Iosevka Nerd Font, window padding, a full 16-color ANSI palette, and live reload via `SIGUSR1`.
 
 ### 5. Theming / Color Engine Logic
@@ -132,7 +133,7 @@ The central script `scripts/apply-theme.sh` computes an extended palette of deri
 - **`scripts/default-apps.sh`**: Sets default applications via `xdg-mime` (web → Thorium, PDF/EPUB → Zathura, images → imv, audio/video → mpv, folders → Thunar); only for apps that are installed.
 - **`scripts/notifications.sh`**: Notification manager. `toggle` (`$mod+n`) switches silent mode (dunst pause: notifications are held and shown when silent mode is turned off); `menu` (`$mod+Shift+n`) opens a Rofi menu to toggle silent mode, re-show the last notification, clear the history, and mute/unmute any app that has sent a notification (or type an app name to mute it); `status` feeds the Polybar bell module.
 - **`scripts/calendar.sh`**: Polybar clock click handler. Toggles a `yad` GTK calendar (themed by `gtk.css`, with week numbers and previous/next month arrows) in the top-right corner of the focused monitor. Click the clock again or press `Esc` to close it.
-- **`scripts/polybar-disk.sh`** & **`scripts/polybar-ip.sh`**: Disk usage and local IPv4 helpers for the bottom Polybar (kept as scripts so `config.ini` needs no escaping).
+- **`scripts/polybar-disk.sh`**, **`scripts/polybar-memory.sh`** & **`scripts/polybar-ip.sh`**: Disk usage, RAM usage and local IPv4 helpers for the bottom Polybar (kept as scripts so `config.ini` needs no escaping).
 - **`scripts/polybar-gpu.sh`**: Multi-vendor GPU utilization helper for the bottom Polybar (`NVIDIA`, `AMD`, and `Intel` via DRM sysfs), with automatic VM vs. baremetal fallback detection.
 
 ### 7. Open Ideas / TODO

@@ -157,6 +157,9 @@ cat <<EOF > "$CACHE_DIR/rofi.rasi"
 }
 EOF
 
+# Minimal single-colour app icons for Rofi (icon theme ColorEngine-Apps), in the soft accent
+bash "$HOME/dotfiles/scripts/rofi-icons.sh" "$ACCENT_SOFT" || echo "[!] Rofi icons could not be generated." >&2
+
 # ==========================================
 # 5. Thunar / GTK3 CSS, Thorium Browser, LightDM Greeter & Dynamic Folder Icons
 # ==========================================
