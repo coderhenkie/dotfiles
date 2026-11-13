@@ -516,6 +516,9 @@ chmod +x "$DOTFILES_DIR/scripts/"*.sh
 [ -f "$DOTFILES_DIR/autorandr/postswitch" ] && chmod +x "$DOTFILES_DIR/autorandr/postswitch"
 ln -sf "$DOTFILES_DIR/scripts/lock.sh" "$LOCAL_BIN/lock"
 
+echo "==> Adding the dotfiles tools to Rofi (font picker, themes, clipboard, ...)..."
+bash "$DOTFILES_DIR/scripts/desktop-entries.sh"
+
 echo "==> Setting default applications (Thorium, Zathura, imv, mpv, Thunar)..."
 bash "$DOTFILES_DIR/scripts/default-apps.sh"
 
