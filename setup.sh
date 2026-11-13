@@ -18,8 +18,9 @@ if [ "${DOTFILES_SETUP_RELOADED:-0}" != "1" ]; then
     sudo apt update
     sudo apt install -y nala curl git
 
-    echo "==> Fetching fastest mirrors with Nala..."
-    sudo nala fetch --auto -y
+    # No 'nala fetch': it adds extra mirrors on every run, and mixing mirrors that are not in sync
+    # breaks installs ("held broken packages"). The Debian installer's mirror is used as-is.
+    sudo rm -f /etc/apt/sources.list.d/fetch.sources
 
     echo "==> Upgrading system via Nala..."
     sudo nala upgrade -y
@@ -42,6 +43,16 @@ if [ "${DOTFILES_SETUP_RELOADED:-0}" != "1" ]; then
     chmod +x "$DOTFILES_DIR/setup.sh"
     export DOTFILES_SETUP_RELOADED=1
     exec bash "$DOTFILES_DIR/setup.sh" "$@"
+fi
+
+# ==========================================
+# 2.5 Clean APT Sources (runs after the re-exec, so it also repairs machines where an
+#     older setup.sh just added nala's extra mirrors)
+# ==========================================
+if [ -f /etc/apt/sources.list.d/fetch.sources ]; then
+    echo "==> Removing nala fetch mirrors (mixed mirrors can break package installs)..."
+    sudo rm -f /etc/apt/sources.list.d/fetch.sources
+    sudo apt update
 fi
 
 # ==========================================
