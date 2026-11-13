@@ -1,4 +1,4 @@
-# Font module for scripts/font-picker.sh ($mod+Shift+f). Sourced by scripts/lib/fonts.sh.
+# Font module for scripts/menu-font.sh ($mod+Shift+f). Sourced by scripts/lib/fonts.sh.
 FONT_NAME="Cascadia Code"
 FONT_DESCRIPTION="Microsoft's modern terminal font, with ligatures"
 FONT_ASSET="CascadiaCode.tar.xz"              # release asset in github.com/ryanoasis/nerd-fonts (checksum-verified)

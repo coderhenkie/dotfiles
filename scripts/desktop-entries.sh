@@ -15,17 +15,17 @@ mkdir -p "$APPS_DIR"
 
 # id | Name | Comment (incl. hotkey) | command | search keywords (English + Dutch)
 TOOLS=(
-    "font-picker|Font Picker|Change the desktop font (\$mod+Shift+f)|$SCRIPTS/font-picker.sh|font;fonts;typeface;lettertype;letters;"
-    "theme-selector|Theme Selector|Pick a preset colour theme (\$mod+Shift+w)|$SCRIPTS/theme-selector.sh|theme;colors;colours;kleuren;thema;"
-    "wallpaper-theme|Wallpaper Theme|Pick a wallpaper and generate matching colours (\$mod+t)|$SCRIPTS/ai-theme.sh|wallpaper;background;achtergrond;pywal;theme;kleuren;"
-    "hotkeys|Hotkey Menu|View and rebind hotkeys (\$mod+m)|$SCRIPTS/hotkey-menu.sh|hotkeys;shortcuts;keybindings;sneltoetsen;toetsen;"
+    "font-picker|Font Picker|Change the desktop font (\$mod+Shift+f)|$SCRIPTS/menu-font.sh|font;fonts;typeface;lettertype;letters;"
+    "theme-selector|Theme Selector|Pick a preset colour theme (\$mod+Shift+w)|$SCRIPTS/menu-theme.sh|theme;colors;colours;kleuren;thema;"
+    "wallpaper-theme|Wallpaper Theme|Pick a wallpaper and generate matching colours (\$mod+t)|$SCRIPTS/menu-wallpaper.sh|wallpaper;background;achtergrond;pywal;theme;kleuren;"
+    "hotkeys|Hotkey Menu|View and rebind hotkeys (\$mod+m)|$SCRIPTS/menu-hotkeys.sh|hotkeys;shortcuts;keybindings;sneltoetsen;toetsen;"
     "modkey|Switch Mod Key|Toggle the mod key between Alt and Super|$SCRIPTS/toggle-modkey.sh|mod;alt;super;windows;"
-    "clipboard|Clipboard History|Copy an earlier clipboard entry again (\$mod+c)|$SCRIPTS/clipboard.sh menu|clipboard;history;klembord;geschiedenis;paste;"
-    "calculator|Calculator|Calculate, convert units and currencies (\$mod+equal)|$SCRIPTS/calculator.sh|calculator;calc;math;rekenmachine;rekenen;"
-    "emoji|Emoji Picker|Type or copy an emoji (\$mod+Shift+period)|$SCRIPTS/emoji.sh|emoji;smiley;emoticon;"
+    "clipboard|Clipboard History|Copy an earlier clipboard entry again (\$mod+c)|$SCRIPTS/menu-clipboard.sh menu|clipboard;history;klembord;geschiedenis;paste;"
+    "calculator|Calculator|Calculate, convert units and currencies (\$mod+equal)|$SCRIPTS/menu-calc.sh|calculator;calc;math;rekenmachine;rekenen;"
+    "emoji|Emoji Picker|Type or copy an emoji (\$mod+Shift+period)|$SCRIPTS/menu-emoji.sh|emoji;smiley;emoticon;"
     "screenshot|Screenshot|Select an area: saved to ~/Pictures and copied (Ctrl+Shift+t)|$SCRIPTS/screenshot.sh|screenshot;capture;schermafbeelding;printscreen;"
-    "notifications|Notifications|Silent mode, history and muted apps (\$mod+Shift+n)|$SCRIPTS/notifications.sh menu|notifications;silent;mute;meldingen;stil;"
-    "power|Power Menu|Lock, suspend, log out, reboot or shut down (\$mod+Shift+e)|$SCRIPTS/power-menu.sh|power;shutdown;reboot;logout;suspend;afsluiten;herstarten;uitloggen;"
+    "notifications|Notifications|Silent mode, history and muted apps (\$mod+Shift+n)|$SCRIPTS/menu-notifications.sh menu|notifications;silent;mute;meldingen;stil;"
+    "power|Power Menu|Lock, suspend, log out, reboot or shut down (\$mod+Shift+e)|$SCRIPTS/menu-power.sh|power;shutdown;reboot;logout;suspend;afsluiten;herstarten;uitloggen;"
     "lock|Lock Screen|Lock the screen (\$mod+Shift+x)|$SCRIPTS/lock.sh|lock;vergrendelen;"
 )
 

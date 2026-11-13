@@ -38,11 +38,15 @@ exec --no-startup-id nm-applet
 exec --no-startup-id /usr/libexec/polkit-mate-authentication-agent-1
 
 # Clipboard history watcher ($mod+c) and low-battery warnings (exits on machines without a battery)
-exec --no-startup-id ~/dotfiles/scripts/clipboard.sh daemon
+exec --no-startup-id ~/dotfiles/scripts/menu-clipboard.sh daemon
 exec --no-startup-id ~/dotfiles/scripts/battery-notify.sh
 
 # Keep Thorium up to date (checksum-verified; notifies only when it updated)
 exec --no-startup-id ~/dotfiles/scripts/update-thorium.sh --quiet
+
+# Apply the monitor layout at login: a saved autorandr profile if one matches,
+# otherwise mirror every connected screen (HDMI/TV) via the `default` -> `common` fallback
+exec --no-startup-id autorandr --change --default default
 
 # Launch Polybar (replaces default i3bar)
 exec_always --no-startup-id ~/.config/polybar/launch.sh
@@ -57,4 +61,5 @@ exec_always --no-startup-id picom --config ~/.config/picom/picom.conf -b
 exec_always --no-startup-id setxkbmap -option caps:swapescape
 
 # Merge Xresources
-exec --no-startup-id xrdb -merge ~/.Xresources
+# Merge ~/.Xresources (base DPI) and apply the saved UI scale ($mod+Shift+plus/minus)
+exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh apply

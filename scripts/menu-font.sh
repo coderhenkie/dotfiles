@@ -46,8 +46,9 @@ font_load "$id"
 
 if ! font_is_installed "$id"; then
     notify-send -a "Font" -u low "Downloading $FONT_NAME" "Checksum-verified Nerd Font, a few MB..." 2>/dev/null
-    if ! font_install "$id" >/dev/null 2>&1; then
-        notify-send -a "Font" -u critical "Font install failed" "$FONT_NAME could not be downloaded or verified" 2>/dev/null
+    if ! err=$(font_install "$id" 2>&1 >/dev/null); then
+        notify-send -a "Font" -u critical "Font install failed" \
+            "$FONT_NAME could not be downloaded or verified.\n$(grep -m1 '^\[!\]' <<< "$err")" 2>/dev/null
         exit 1
     fi
     font_load "$id"

@@ -47,7 +47,7 @@ ANSI_CYAN=$(blend_hex "$ACCENT_SOFT" "#8be9fd" 45)
 CACHE_DIR="$HOME/.cache/theme"
 mkdir -p "$CACHE_DIR"
 
-# Active font module (scripts/font-picker.sh, $mod+Shift+f): put into every generated config below
+# Active font module (scripts/menu-font.sh, $mod+Shift+f): put into every generated config below
 # shellcheck source=lib/fonts.sh
 source "$HOME/dotfiles/scripts/lib/fonts.sh"
 font_load "$(font_active)"

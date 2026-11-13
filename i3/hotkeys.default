@@ -13,23 +13,30 @@ floating_modifier $mod
 tiling_drag modifier titlebar
 
 # Custom Rofi Menus, Theme Engine & Screen Lock
-bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/scripts/theme-selector.sh
-bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
-bindsym $mod+m exec --no-startup-id ~/dotfiles/scripts/hotkey-menu.sh
+bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/scripts/menu-theme.sh
+bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/menu-wallpaper.sh
+bindsym $mod+m exec --no-startup-id ~/dotfiles/scripts/menu-hotkeys.sh
 bindsym $mod+Shift+x exec --no-startup-id ~/dotfiles/scripts/lock.sh
 
 # Notifications: toggle silent mode / open notification menu
-bindsym $mod+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh toggle
-bindsym $mod+Shift+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh menu
+bindsym $mod+n exec --no-startup-id ~/dotfiles/scripts/menu-notifications.sh toggle
+bindsym $mod+Shift+n exec --no-startup-id ~/dotfiles/scripts/menu-notifications.sh menu
 
 # Area screenshot -> ~/Pictures + clipboard
 bindsym Control+Shift+t exec --no-startup-id ~/dotfiles/scripts/screenshot.sh
 
 # Rofi tools: clipboard history, calculator, emoji picker, font picker
-bindsym $mod+c exec --no-startup-id ~/dotfiles/scripts/clipboard.sh menu
-bindsym $mod+equal exec --no-startup-id ~/dotfiles/scripts/calculator.sh
-bindsym $mod+Shift+period exec --no-startup-id ~/dotfiles/scripts/emoji.sh
-bindsym $mod+Shift+f exec --no-startup-id ~/dotfiles/scripts/font-picker.sh
+bindsym $mod+c exec --no-startup-id ~/dotfiles/scripts/menu-clipboard.sh menu
+bindsym $mod+equal exec --no-startup-id ~/dotfiles/scripts/menu-calc.sh
+bindsym $mod+Shift+period exec --no-startup-id ~/dotfiles/scripts/menu-emoji.sh
+bindsym $mod+Shift+f exec --no-startup-id ~/dotfiles/scripts/menu-font.sh
+
+# UI scale, like browser zoom: 10% bigger / smaller / back to 100%
+bindsym $mod+Shift+equal exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh up
+bindsym $mod+Shift+minus exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh down
+bindsym $mod+Shift+KP_Add exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh up
+bindsym $mod+Shift+KP_Subtract exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh down
+bindsym $mod+Shift+BackSpace exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh reset
 
 # Volume controls (managed via PulseAudio / PipeWire; Polybar handles status display)
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
@@ -130,7 +137,7 @@ bindsym $mod+Shift+0 move container to workspace number $ws10
 # Reload / Restart i3 & power menu (lock, suspend, log out, reboot, shut down)
 bindsym $mod+Shift+c reload
 bindsym $mod+Shift+r restart
-bindsym $mod+Shift+e exec --no-startup-id ~/dotfiles/scripts/power-menu.sh
+bindsym $mod+Shift+e exec --no-startup-id ~/dotfiles/scripts/menu-power.sh
 
 # Resize window mode
 mode "resize" {

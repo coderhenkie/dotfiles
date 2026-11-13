@@ -1,4 +1,8 @@
-# Saved monitor profiles are machine-specific (autorandr --save <name>); only hooks are tracked
+# Saved monitor profiles are machine-specific (autorandr --save <name>); only hooks are tracked.
+# `default` is a symlink to autorandr's built-in `common` profile (mirror all screens at the
+# largest shared resolution). It is the fallback whenever no saved profile matches, so any
+# HDMI screen/TV works on every machine without saving a profile first.
 *
 !.gitignore
 !postswitch
+!default
