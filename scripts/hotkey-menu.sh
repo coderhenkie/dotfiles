@@ -89,6 +89,7 @@ describe_action() {
         *clipboard.sh*)      echo "${prefix}Clipboard history" ;;
         *calculator.sh*)     echo "${prefix}Calculator" ;;
         *emoji.sh*)          echo "${prefix}Emoji picker" ;;
+        *font-picker.sh*)    echo "${prefix}Font picker" ;;
         *"notifications.sh toggle"*) echo "${prefix}Silent mode (notifications)" ;;
         *"notifications.sh menu"*)   echo "${prefix}Notification menu" ;;
         *toggle-modkey.sh*)  echo "${prefix}Switch Mod key" ;;

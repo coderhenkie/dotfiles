@@ -314,19 +314,20 @@ if [ ! -f "$HOME/.config/thorium/Default/Preferences" ]; then
 EOF
 fi
 
-# Thorium default web fonts -> Iosevka (pages without their own web fonts use these).
+# Thorium default web fonts -> generic families. Fontconfig maps those to the active font module
+# ($mod+Shift+f), so web pages follow the font picker without touching Thorium again.
 # Thorium rewrites Preferences on exit, so this only runs while Thorium is closed.
 THORIUM_PREFS="$HOME/.config/thorium/Default/Preferences"
 if [ -f "$THORIUM_PREFS" ] && ! pgrep -x thorium >/dev/null; then
     THORIUM_TMP=$(mktemp "$THORIUM_PREFS.XXXXXX")
     if jq '.webkit.webprefs.fonts = ((.webkit.webprefs.fonts // {}) + {
-            "standard":  {"Zyyy": "Iosevka Nerd Font"},
-            "sansserif": {"Zyyy": "Iosevka Nerd Font"},
-            "serif":     {"Zyyy": "Iosevka Nerd Font"},
-            "fixed":     {"Zyyy": "Iosevka Nerd Font Mono"}
+            "standard":  {"Zyyy": "sans-serif"},
+            "sansserif": {"Zyyy": "sans-serif"},
+            "serif":     {"Zyyy": "serif"},
+            "fixed":     {"Zyyy": "monospace"}
         })' "$THORIUM_PREFS" > "$THORIUM_TMP"; then
         mv "$THORIUM_TMP" "$THORIUM_PREFS"
-        echo "[OK] Thorium default web fonts set to Iosevka."
+        echo "[OK] Thorium default web fonts follow the active font."
     else
         rm -f "$THORIUM_TMP"
     fi
@@ -391,46 +392,36 @@ if ! grep -q "$HOME/.local/bin" "$HOME/.bashrc"; then
 fi
 
 # ==========================================
-# 5. Install Iosevka Nerd Font (User & System-wide for LightDM)
+# 5. Fonts (modules in ~/dotfiles/fonts, picker: $mod+Shift+f)
 # ==========================================
-echo "==> Installing Iosevka Nerd Font..."
-FONT_DIR="$HOME/.local/share/fonts"
-SYS_FONT_DIR="/usr/local/share/fonts/Iosevka"
+echo "==> Installing fonts..."
+# shellcheck source=scripts/lib/fonts.sh
+source "$DOTFILES_DIR/scripts/lib/fonts.sh"
 
-# Iosevka replaced JetBrainsMono: remove the old copies (user + system-wide for LightDM)
-if [ -d "$FONT_DIR/JetBrainsMono" ] || [ -d /usr/local/share/fonts/JetBrainsMono ]; then
-    rm -rf "$FONT_DIR/JetBrainsMono"
-    sudo rm -rf /usr/local/share/fonts/JetBrainsMono
-    echo "[OK] Removed the old JetBrainsMono Nerd Font."
+# User-owned system font dir: the LightDM greeter can read it, the font picker writes it without sudo
+sudo mkdir -p "$FONTS_SYSTEM_DIR"
+sudo chown "$USER:$USER" "$FONTS_SYSTEM_DIR"
+sudo chmod 755 "$FONTS_SYSTEM_DIR"
+
+# Migrate older layouts (one dir per font in ~/.local/share/fonts + root-owned system copies)
+if [ -d "$HOME/.local/share/fonts/Iosevka" ]; then
+    mkdir -p "$FONTS_SYSTEM_DIR/iosevka"
+    mv -f "$HOME/.local/share/fonts/Iosevka/"* "$FONTS_SYSTEM_DIR/iosevka/" 2>/dev/null || true
+    rm -rf "$HOME/.local/share/fonts/Iosevka"
+    chmod -R a+rX "$FONTS_SYSTEM_DIR/iosevka"
 fi
+rm -rf "$HOME/.local/share/fonts/JetBrainsMono"
+sudo rm -rf /usr/local/share/fonts/JetBrainsMono /usr/local/share/fonts/Iosevka
+fc-cache -f >/dev/null 2>&1
 
-if [ ! -f "$FONT_DIR/Iosevka/IosevkaNerdFont-Regular.ttf" ]; then
-    # The .tar.xz has the same fonts as the 384 MB .zip in 87 MB. Only Regular/Bold/Italic/BoldItalic
-    # of "Iosevka Nerd Font" (UI, bars, menus) and "Iosevka Nerd Font Mono" (terminal) are kept.
-    FONT_TMP=$(mktemp -d)
-    if gh_install_latest "ryanoasis/nerd-fonts" '^Iosevka\.tar\.xz$' "$FONT_TMP/Iosevka.tar.xz"; then
-        mkdir -p "$FONT_DIR/Iosevka"
-        for style in Regular Bold Italic BoldItalic; do
-            tar -xJf "$FONT_TMP/Iosevka.tar.xz" -C "$FONT_DIR/Iosevka" \
-                "IosevkaNerdFont-$style.ttf" "IosevkaNerdFontMono-$style.ttf"
-        done
-        tar -xJf "$FONT_TMP/Iosevka.tar.xz" -C "$FONT_DIR/Iosevka" LICENSE.md 2>/dev/null || true
-        fc-cache -f
-        echo "[OK] Iosevka Nerd Font installed in ~/.local/share/fonts."
+# Install the default font and the active one (if another font was picked on this machine)
+for font_id in "$FONTS_DEFAULT" "$(font_active)"; do
+    if font_is_installed "$font_id"; then
+        echo "[OK] $FONT_NAME Nerd Font is installed."
     else
-        echo "[!] Iosevka Nerd Font could not be installed (continuing setup)."
+        font_install "$font_id" || echo "[!] $font_id font could not be installed (continuing setup)."
     fi
-    rm -rf "$FONT_TMP"
-fi
-
-# The LightDM greeter runs as the 'lightdm' user and cannot see ~/.local/share/fonts
-if [ -d "$FONT_DIR/Iosevka" ] && [ ! -d "$SYS_FONT_DIR" ]; then
-    sudo mkdir -p "$SYS_FONT_DIR"
-    sudo cp -rf "$FONT_DIR/Iosevka/"* "$SYS_FONT_DIR/"
-    sudo chmod -R a+rX "$SYS_FONT_DIR"
-    sudo fc-cache -f
-    echo "[OK] Font installed system-wide for LightDM."
-fi
+done
 
 # ==========================================
 # 6. Install Pywal (AI Color Engine)
@@ -484,6 +475,12 @@ fi
 if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/notifications.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
     sed -i '/scripts\/lock\.sh/a bindsym $mod+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh toggle\nbindsym $mod+Shift+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh menu' "$DOTFILES_DIR/i3/hotkeys.conf"
     echo "[OK] Added notification hotkeys (\$mod+n / \$mod+Shift+n) to existing i3/hotkeys.conf."
+fi
+
+# Migrate existing hotkeys.conf files: add the font picker once
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/font-picker.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/scripts\/lock\.sh/a bindsym $mod+Shift+f exec --no-startup-id ~/dotfiles/scripts/font-picker.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Added font picker hotkey (\$mod+Shift+f) to existing i3/hotkeys.conf."
 fi
 
 # Migrate existing hotkeys.conf files: volume keys step 5% instead of 10%

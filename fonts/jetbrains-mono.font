@@ -1,0 +1,7 @@
+# Font module for scripts/font-picker.sh ($mod+Shift+f). Sourced by scripts/lib/fonts.sh.
+FONT_NAME="JetBrains Mono"
+FONT_DESCRIPTION="Very readable, the most recommended coding font"
+FONT_ASSET="JetBrainsMono.tar.xz"              # release asset in github.com/ryanoasis/nerd-fonts (checksum-verified)
+FONT_FILE_PREFIX="JetBrainsMonoNerdFont"        # files kept: <prefix>-<Style>.ttf and <prefix>Mono-<Style>.ttf
+FONT_FAMILY="JetBrainsMono Nerd Font"             # UI: Polybar, i3, Rofi, dunst, GTK, LightDM, Zathura, Spotify, web pages
+FONT_FAMILY_MONO="JetBrainsMono Nerd Font Mono"   # Kitty: every icon exactly one cell wide

@@ -1,0 +1,7 @@
+# Font module for scripts/font-picker.sh ($mod+Shift+f). Sourced by scripts/lib/fonts.sh.
+FONT_NAME="Meslo"
+FONT_DESCRIPTION="Classic terminal look, the Powerlevel10k default"
+FONT_ASSET="Meslo.tar.xz"              # release asset in github.com/ryanoasis/nerd-fonts (checksum-verified)
+FONT_FILE_PREFIX="MesloLGSNerdFont"        # files kept: <prefix>-<Style>.ttf and <prefix>Mono-<Style>.ttf
+FONT_FAMILY="MesloLGS Nerd Font"             # UI: Polybar, i3, Rofi, dunst, GTK, LightDM, Zathura, Spotify, web pages
+FONT_FAMILY_MONO="MesloLGS Nerd Font Mono"   # Kitty: every icon exactly one cell wide
