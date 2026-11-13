@@ -44,6 +44,21 @@ gh_download_verified() {
     echo "[OK] Verified $(basename "$url") (${digest:0:19}...)"
 }
 
+# gh_check_update <owner/repo> <asset-name-regex> <installed-version>
+#   Looks up the newest matching release and compares it with <installed-version>
+#   (leading "v" ignored; empty = not installed). Sets GH_LATEST_VERSION, GH_URL and
+#   GH_DIGEST. Returns 0 when an install/update is needed, 1 when already up to date,
+#   2 when the release could not be looked up (offline, API rate limit).
+gh_check_update() {
+    local repo="$1" regex="$2" current="${3#v}" info tag
+    info=$(gh_find_asset "$repo" "$regex") || return 2
+    IFS='|' read -r tag _ GH_URL GH_DIGEST <<< "$info"
+    GH_LATEST_VERSION="${tag#v}"
+    [ -z "$current" ] && return 0
+    [ "$(printf '%s\n%s\n' "$current" "$GH_LATEST_VERSION" | sort -V | tail -n 1)" = "$current" ] && return 1
+    return 0
+}
+
 # gh_install_latest <owner/repo> <asset-name-regex> <destination>
 #   Convenience wrapper: find the newest matching asset and download it verified.
 gh_install_latest() {
