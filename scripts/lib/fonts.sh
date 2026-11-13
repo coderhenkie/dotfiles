@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==========================================
-# Font modules (sourced by setup.sh, apply-theme.sh, font-picker.sh, rofi-icons.sh)
+# Font modules (sourced by setup.sh, apply-theme.sh, menu-font.sh, rofi-icons.sh)
 # ==========================================
 # Every font is a small module in ~/dotfiles/fonts/<id>.font (see iosevka.font).
 # The active font id is stored in ~/.cache/theme/current.font; apply-theme.sh puts
@@ -75,7 +75,10 @@ font_install() {
     local dest tmp style f
     dest="$(font_root)/$FONT_ID"
     tmp=$(mktemp -d)
-    if ! gh_install_latest "ryanoasis/nerd-fonts" "^${FONT_ASSET//./\\.}\$" "$tmp/$FONT_ASSET"; then
+    # GitHub API (digest per asset) first; when that fails (e.g. the 60/hour API rate limit),
+    # fall back to the plain download URL verified against the release's SHA-256.txt
+    if ! gh_install_latest "ryanoasis/nerd-fonts" "^${FONT_ASSET//./\\.}\$" "$tmp/$FONT_ASSET" \
+        && ! gh_install_latest_sumfile "ryanoasis/nerd-fonts" "$FONT_ASSET" "SHA-256.txt" "$tmp/$FONT_ASSET"; then
         rm -rf "$tmp"
         return 1
     fi

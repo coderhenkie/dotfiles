@@ -1,4 +1,4 @@
-# Font module for scripts/font-picker.sh ($mod+Shift+f). Sourced by scripts/lib/fonts.sh.
+# Font module for scripts/menu-font.sh ($mod+Shift+f). Sourced by scripts/lib/fonts.sh.
 FONT_NAME="Source Code Pro"
 FONT_DESCRIPTION="Adobe's open-source coding font, calm and balanced"
 FONT_ASSET="SourceCodePro.tar.xz"              # release asset in github.com/ryanoasis/nerd-fonts (checksum-verified)

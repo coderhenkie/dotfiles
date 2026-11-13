@@ -3,10 +3,10 @@
 # ==========================================
 # Notification Manager (dunst + Rofi + Polybar)
 # ==========================================
-# notifications.sh [menu]   Rofi menu: silent mode, history, mute/unmute apps
-# notifications.sh toggle   Toggle silent mode (dunst pause). Notifications that
+# menu-notifications.sh [menu]   Rofi menu: silent mode, history, mute/unmute apps
+# menu-notifications.sh toggle   Toggle silent mode (dunst pause). Notifications that
 #                           arrive while silent are held and shown when you turn it off.
-# notifications.sh status   One-line status for the bottom Polybar
+# menu-notifications.sh status   One-line status for the bottom Polybar
 #
 # Muted apps are stored as dunst rules in ~/.config/dunst/dunstrc.d/50-muted-apps.conf
 # (machine-local and ignored by Git, like i3/hotkeys.conf). Muted notifications are
@@ -32,7 +32,7 @@ muted_apps() {
 write_muted_apps() {
     mkdir -p "$(dirname "$MUTE_FILE")"
     {
-        echo "# Managed by ~/dotfiles/scripts/notifications.sh (\$mod+Shift+n)"
+        echo "# Managed by ~/dotfiles/scripts/menu-notifications.sh (\$mod+Shift+n)"
         echo "# Machine-local; ignored by Git. Edit via the menu or by hand."
         echo
         local app i=0

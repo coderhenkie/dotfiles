@@ -21,7 +21,7 @@ SYS_FONT_DIR="/usr/local/share/fonts/ColorEngine"   # font modules (scripts/lib/
 
 echo "==> Provisioning LightDM ColorEngine theme directories..."
 sudo mkdir -p "$SYS_THEME_DIR/gtk-3.0" "$SYS_ICON_DIR" "$SYS_FONT_DIR" /etc/lightdm/lightdm.conf.d
-# User-owned, world-readable: apply-theme.sh / font-picker.sh update them without sudo,
+# User-owned, world-readable: apply-theme.sh / menu-font.sh update them without sudo,
 # and the LightDM greeter (user 'lightdm') can read them
 sudo chown -R "$USER:$USER" "$SYS_THEME_DIR" "$SYS_ICON_DIR" "$SYS_FONT_DIR"
 sudo chmod -R a+rX,u+w "$SYS_THEME_DIR" "$SYS_ICON_DIR" "$SYS_FONT_DIR"

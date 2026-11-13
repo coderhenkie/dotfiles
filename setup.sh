@@ -30,10 +30,87 @@ if [ "${DOTFILES_SETUP_RELOADED:-0}" != "1" ]; then
     # ==========================================
     echo "==> Fetching latest dotfiles..."
 
+    # choose <prompt> <option>...: interactive picker on the terminal (j/k or arrow keys, Enter).
+    # Sets CHOICE to the index of the picked option. Reads /dev/tty, so it also works when this
+    # script itself is piped in (curl ... | bash).
+    choose() {
+        local prompt="$1" sel=0 key i n
+        shift
+        local -a opts=("$@")
+        n=${#opts[@]}
+        printf '%s  (j/k or arrows, Enter)\n' "$prompt" >/dev/tty
+        printf '\e[?25l' >/dev/tty
+        while true; do
+            for i in "${!opts[@]}"; do
+                if [ "$i" -eq "$sel" ]; then
+                    printf '\e[2K  \e[1;36m> %s\e[0m\n' "${opts[$i]}"
+                else
+                    printf '\e[2K    %s\n' "${opts[$i]}"
+                fi
+            done >/dev/tty
+            IFS= read -rsn1 key </dev/tty || key=""
+            if [ "$key" = $'\e' ]; then
+                IFS= read -rsn2 -t 0.05 key </dev/tty || true
+                [ -z "$key" ] && key="esc"
+            fi
+            case "$key" in
+                j|'[B') sel=$(( (sel + 1) % n )) ;;
+                k|'[A') sel=$(( (sel - 1 + n) % n )) ;;
+                '') break ;;   # Enter
+            esac
+            printf '\e[%dA' "$n" >/dev/tty
+        done
+        printf '\e[?25h' >/dev/tty
+        CHOICE=$sel
+    }
+
     if [ -d "$DOTFILES_DIR/.git" ]; then
         echo "==> Dotfiles directory already exists. Syncing with latest origin/main..."
         git -C "$DOTFILES_DIR" fetch origin
-        git -C "$DOTFILES_DIR" reset --hard origin/main
+        DOTFILES_UPDATE=1
+        LOCAL_CHANGES=$(git -C "$DOTFILES_DIR" status --short)
+        LOCAL_COMMITS=$(git -C "$DOTFILES_DIR" log --oneline origin/main..HEAD)
+
+        # The update below is a hard reset to origin/main: never let it silently destroy local work
+        if [ -n "$LOCAL_CHANGES" ] || [ -n "$LOCAL_COMMITS" ]; then
+            echo
+            echo "[!] $DOTFILES_DIR has local work that the update to origin/main would overwrite:"
+            [ -n "$LOCAL_CHANGES" ] && { echo "    Uncommitted changes:"; sed 's/^/      /' <<< "$LOCAL_CHANGES"; }
+            [ -n "$LOCAL_COMMITS" ] && { echo "    Commits not pushed to origin/main:"; sed 's/^/      /' <<< "$LOCAL_COMMITS"; }
+            echo
+            BACKUP_REF="setup-backup-$(date +%Y%m%d-%H%M%S)"
+            if ( : </dev/tty ) 2>/dev/null; then
+                choose "What should happen with these changes?" \
+                    "Save them (stash + backup branch), then update to origin/main" \
+                    "Discard them and update to origin/main" \
+                    "Keep them: skip the update and run setup with the local version" \
+                    "Abort setup"
+            else
+                echo "[!] No terminal to ask on: saving the changes before updating."
+                CHOICE=0
+            fi
+            case "$CHOICE" in
+                0)
+                    if [ -n "$LOCAL_COMMITS" ]; then
+                        git -C "$DOTFILES_DIR" branch "$BACKUP_REF"
+                        echo "[OK] Local commits saved in branch '$BACKUP_REF'."
+                        echo "     Bring them back with: git -C ~/dotfiles merge $BACKUP_REF"
+                    fi
+                    if [ -n "$LOCAL_CHANGES" ]; then
+                        git -C "$DOTFILES_DIR" stash push -u -m "$BACKUP_REF" >/dev/null
+                        echo "[OK] Uncommitted changes stashed as '$BACKUP_REF'."
+                        echo "     Restore them with: git -C ~/dotfiles stash pop"
+                    fi
+                    ;;
+                1) echo "==> Discarding local changes." ;;
+                2) DOTFILES_UPDATE=0; echo "==> Keeping local changes; setup runs with the local version." ;;
+                *) echo "==> Setup aborted; nothing was changed in $DOTFILES_DIR."; exit 1 ;;
+            esac
+        fi
+
+        if [ "$DOTFILES_UPDATE" = 1 ]; then
+            git -C "$DOTFILES_DIR" reset --hard origin/main
+        fi
     else
         echo "==> Cloning dotfiles from GitHub..."
         git clone https://github.com/coderhenkie/dotfiles.git "$DOTFILES_DIR"
@@ -456,12 +533,28 @@ for app in "${APPS[@]}"; do
     fi
 done
 
+# Migrate existing hotkeys.conf files: the Rofi tools were renamed to scripts/menu-*.sh
+# (must run before the migrations below, which look for the new names)
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ]; then
+    sed -i -E \
+        -e 's#scripts/theme-selector\.sh#scripts/menu-theme.sh#g' \
+        -e 's#scripts/ai-theme\.sh#scripts/menu-wallpaper.sh#g' \
+        -e 's#scripts/font-picker\.sh#scripts/menu-font.sh#g' \
+        -e 's#scripts/hotkey-menu\.sh#scripts/menu-hotkeys.sh#g' \
+        -e 's#scripts/power-menu\.sh#scripts/menu-power.sh#g' \
+        -e 's#scripts/clipboard\.sh#scripts/menu-clipboard.sh#g' \
+        -e 's#scripts/calculator\.sh#scripts/menu-calc.sh#g' \
+        -e 's#scripts/emoji\.sh#scripts/menu-emoji.sh#g' \
+        -e 's#scripts/notifications\.sh#scripts/menu-notifications.sh#g' \
+        "$DOTFILES_DIR/i3/hotkeys.conf"
+fi
+
 # Initialize local i3 hotkeys.conf from hotkeys.default only on first install
 if [ ! -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && [ -f "$DOTFILES_DIR/i3/hotkeys.default" ]; then
     cp "$DOTFILES_DIR/i3/hotkeys.default" "$DOTFILES_DIR/i3/hotkeys.conf"
     echo "[OK] Initialized i3/hotkeys.conf from hotkeys.default."
 elif [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/lock.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
-    sed -i '/hotkey-menu\.sh/a bindsym $mod+Shift+x exec --no-startup-id ~/dotfiles/scripts/lock.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
+    sed -i '/menu-hotkeys\.sh/a bindsym $mod+Shift+x exec --no-startup-id ~/dotfiles/scripts/lock.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
     echo "[OK] Added screen lock hotkey (\$mod+Shift+x) to existing i3/hotkeys.conf."
 fi
 
@@ -472,15 +565,21 @@ if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/screenshot.sh" 
 fi
 
 # Migrate existing hotkeys.conf files: add the notification hotkeys once
-if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/notifications.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
-    sed -i '/scripts\/lock\.sh/a bindsym $mod+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh toggle\nbindsym $mod+Shift+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh menu' "$DOTFILES_DIR/i3/hotkeys.conf"
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/menu-notifications.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/scripts\/lock\.sh/a bindsym $mod+n exec --no-startup-id ~/dotfiles/scripts/menu-notifications.sh toggle\nbindsym $mod+Shift+n exec --no-startup-id ~/dotfiles/scripts/menu-notifications.sh menu' "$DOTFILES_DIR/i3/hotkeys.conf"
     echo "[OK] Added notification hotkeys (\$mod+n / \$mod+Shift+n) to existing i3/hotkeys.conf."
 fi
 
 # Migrate existing hotkeys.conf files: add the font picker once
-if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/font-picker.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
-    sed -i '/scripts\/lock\.sh/a bindsym $mod+Shift+f exec --no-startup-id ~/dotfiles/scripts/font-picker.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/menu-font.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/scripts\/lock\.sh/a bindsym $mod+Shift+f exec --no-startup-id ~/dotfiles/scripts/menu-font.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
     echo "[OK] Added font picker hotkey (\$mod+Shift+f) to existing i3/hotkeys.conf."
+fi
+
+# Migrate existing hotkeys.conf files: add the UI scale hotkeys once
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/ui-scale.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/scripts\/menu-font\.sh/a bindsym $mod+Shift+equal exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh up\nbindsym $mod+Shift+minus exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh down\nbindsym $mod+Shift+KP_Add exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh up\nbindsym $mod+Shift+KP_Subtract exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh down\nbindsym $mod+Shift+BackSpace exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh reset' "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Added UI scale hotkeys (\$mod+Shift+plus / minus / BackSpace) to existing i3/hotkeys.conf."
 fi
 
 # Migrate existing hotkeys.conf files: volume keys step 5% instead of 10%
@@ -490,16 +589,16 @@ if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && grep -Fq 'set-sink-volume @DEFAULT_
 fi
 
 # Migrate existing hotkeys.conf files: power menu replaces the i3-nagbar exit prompt
-if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/power-menu.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
-    sed -i 's|^bindsym \$mod+Shift+e exec "i3-nagbar.*$|bindsym $mod+Shift+e exec --no-startup-id ~/dotfiles/scripts/power-menu.sh|' "$DOTFILES_DIR/i3/hotkeys.conf"
-    grep -Fq "scripts/power-menu.sh" "$DOTFILES_DIR/i3/hotkeys.conf" \
-        || echo 'bindsym $mod+Shift+e exec --no-startup-id ~/dotfiles/scripts/power-menu.sh' >> "$DOTFILES_DIR/i3/hotkeys.conf"
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/menu-power.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i 's|^bindsym \$mod+Shift+e exec "i3-nagbar.*$|bindsym $mod+Shift+e exec --no-startup-id ~/dotfiles/scripts/menu-power.sh|' "$DOTFILES_DIR/i3/hotkeys.conf"
+    grep -Fq "scripts/menu-power.sh" "$DOTFILES_DIR/i3/hotkeys.conf" \
+        || echo 'bindsym $mod+Shift+e exec --no-startup-id ~/dotfiles/scripts/menu-power.sh' >> "$DOTFILES_DIR/i3/hotkeys.conf"
     echo "[OK] Power menu bound to \$mod+Shift+e in existing i3/hotkeys.conf."
 fi
 
 # Migrate existing hotkeys.conf files: add the Rofi tools (clipboard, calculator, emoji) once
-if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/clipboard.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
-    sed -i '/scripts\/lock\.sh/a bindsym $mod+c exec --no-startup-id ~/dotfiles/scripts/clipboard.sh menu\nbindsym $mod+equal exec --no-startup-id ~/dotfiles/scripts/calculator.sh\nbindsym $mod+Shift+period exec --no-startup-id ~/dotfiles/scripts/emoji.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/menu-clipboard.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/scripts\/lock\.sh/a bindsym $mod+c exec --no-startup-id ~/dotfiles/scripts/menu-clipboard.sh menu\nbindsym $mod+equal exec --no-startup-id ~/dotfiles/scripts/menu-calc.sh\nbindsym $mod+Shift+period exec --no-startup-id ~/dotfiles/scripts/menu-emoji.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
     echo "[OK] Added clipboard (\$mod+c), calculator (\$mod+equal) and emoji (\$mod+Shift+period) hotkeys to existing i3/hotkeys.conf."
 fi
 
@@ -514,6 +613,9 @@ fi
 
 chmod +x "$DOTFILES_DIR/scripts/"*.sh
 [ -f "$DOTFILES_DIR/autorandr/postswitch" ] && chmod +x "$DOTFILES_DIR/autorandr/postswitch"
+# autorandr hotplug: udev triggers this service on every plug/unplug (HDMI, dock, lid).
+# Without saved profiles it falls back to autorandr/default -> common (mirror all screens).
+sudo systemctl enable autorandr.service >/dev/null 2>&1 || echo "[!] autorandr.service could not be enabled (continuing setup)."
 ln -sf "$DOTFILES_DIR/scripts/lock.sh" "$LOCAL_BIN/lock"
 
 echo "==> Adding the dotfiles tools to Rofi (font picker, themes, clipboard, ...)..."
@@ -531,13 +633,16 @@ bash "$DOTFILES_DIR/scripts/lockscreen-setup.sh"
 # ==========================================
 # 9. Color Engine Bootstrap & Live Reload (Including LightDM, Thorium, Neovim, Herdr, btop & Spotify)
 # ==========================================
-echo "==> Generating default bootstrap theme in ~/.cache/theme..."
+echo "==> Generating theme files in ~/.cache/theme..."
 CACHE_DIR="$HOME/.cache/theme"
 mkdir -p "$CACHE_DIR"
 
-BG="#282a36"
-FG="#f8f8f2"
-ACCENT="#bd93f9"
+# Re-runs keep the active palette (theme selector / AI theme); Dracula only on a fresh install
+THEME_FILE="$CACHE_DIR/current.theme"
+[ -f "$THEME_FILE" ] || THEME_FILE="$DOTFILES_DIR/themes/dracula.theme"
+# shellcheck disable=SC1090
+source "$THEME_FILE"
+BG="$bg" FG="$fg" ACCENT="$accent"
 
 # HERDR config symlink (only link config.toml so live sockets/logs stay out of git)
 mkdir -p "$HOME/.config/herdr"
@@ -546,6 +651,9 @@ ln -sf "$CACHE_DIR/herdr.toml" "$HOME/.config/herdr/config.toml"
 # BTOP theme symlink
 mkdir -p "$HOME/.config/btop/themes"
 ln -sf "$CACHE_DIR/btop.theme" "$HOME/.config/btop/themes/color_engine.theme"
+
+# UI scale snippets for Rofi & Polybar (keeps the saved scale; 100% on a fresh install)
+bash "$DOTFILES_DIR/scripts/ui-scale.sh" files
 
 # Generate all theme files, ColorEngine icons, and live-reload i3 if a session is active
 bash "$DOTFILES_DIR/scripts/apply-theme.sh" "$BG" "$FG" "$ACCENT"

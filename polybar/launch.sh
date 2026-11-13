@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# UI scale snippet (DPI + height) must exist before Polybar reads its config
+~/dotfiles/scripts/ui-scale.sh files
+
 # Terminate any running Polybar instances
 killall -q polybar
 

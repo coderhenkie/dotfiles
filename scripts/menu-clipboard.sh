@@ -2,9 +2,9 @@
 # ==========================================
 # Clipboard History (xclip + Rofi)
 # ==========================================
-# clipboard.sh daemon   Watches the clipboard and keeps the last 50 text entries.
+# menu-clipboard.sh daemon   Watches the clipboard and keeps the last 50 text entries.
 #                       Started once per login from i3/config.
-# clipboard.sh [menu]   Rofi picker ($mod+c): select an entry to copy it again.
+# menu-clipboard.sh [menu]   Rofi picker ($mod+c): select an entry to copy it again.
 #
 # Privacy: history lives in $XDG_RUNTIME_DIR (RAM, private to you, wiped at logout)
 # and is never written to disk. Passwords copied from Bitwarden also end up here

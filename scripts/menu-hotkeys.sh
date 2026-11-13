@@ -80,22 +80,25 @@ describe_action() {
     fi
 
     case "$cmd" in
-        *theme-selector.sh*) echo "${prefix}Theme selector" ;;
-        *ai-theme.sh*)       echo "${prefix}AI wallpaper theme" ;;
-        *hotkey-menu.sh*)    echo "${prefix}Hotkey menu" ;;
-        *lock.sh*)           echo "${prefix}Lock screen" ;;
-        *screenshot.sh*)     echo "${prefix}Screenshot (area)" ;;
-        *power-menu.sh*)     echo "${prefix}Power menu" ;;
-        *clipboard.sh*)      echo "${prefix}Clipboard history" ;;
-        *calculator.sh*)     echo "${prefix}Calculator" ;;
-        *emoji.sh*)          echo "${prefix}Emoji picker" ;;
-        *font-picker.sh*)    echo "${prefix}Font picker" ;;
-        *"notifications.sh toggle"*) echo "${prefix}Silent mode (notifications)" ;;
-        *"notifications.sh menu"*)   echo "${prefix}Notification menu" ;;
-        *toggle-modkey.sh*)  echo "${prefix}Switch Mod key" ;;
+        *menu-theme.sh*)                     echo "${prefix}Theme selector" ;;
+        *menu-wallpaper.sh*)                 echo "${prefix}AI wallpaper theme" ;;
+        *menu-hotkeys.sh*)                   echo "${prefix}Hotkey menu" ;;
+        *lock.sh*)                           echo "${prefix}Lock screen" ;;
+        *screenshot.sh*)                     echo "${prefix}Screenshot (area)" ;;
+        *menu-power.sh*)                     echo "${prefix}Power menu" ;;
+        *menu-clipboard.sh*)                 echo "${prefix}Clipboard history" ;;
+        *menu-calc.sh*)                      echo "${prefix}Calculator" ;;
+        *menu-emoji.sh*)                     echo "${prefix}Emoji picker" ;;
+        *menu-font.sh*)                      echo "${prefix}Font picker" ;;
+        *"menu-notifications.sh toggle"*)    echo "${prefix}Silent mode (notifications)" ;;
+        *"menu-notifications.sh menu"*)      echo "${prefix}Notification menu" ;;
+        *toggle-modkey.sh*)                  echo "${prefix}Switch Mod key" ;;
+        *"ui-scale.sh up"*)                  echo "${prefix}UI scale +10%" ;;
+        *"ui-scale.sh down"*)                echo "${prefix}UI scale -10%" ;;
+        *"ui-scale.sh reset"*)               echo "${prefix}UI scale reset (100%)" ;;
         "exec kitty")        echo "${prefix}Open terminal" ;;
         "kill")              echo "${prefix}Close window" ;;
-        *"rofi -show drun"*) echo "${prefix}App launcher" ;;
+        *"rofi -show drun"*)                 echo "${prefix}App launcher" ;;
         "focus left")        echo "${prefix}Focus left" ;;
         "focus down")        echo "${prefix}Focus down" ;;
         "focus up")          echo "${prefix}Focus up" ;;
@@ -123,17 +126,17 @@ describe_action() {
             ;;
         "reload")            echo "${prefix}Reload i3" ;;
         "restart")           echo "${prefix}Restart i3" ;;
-        *"i3-nagbar"*)       echo "${prefix}Exit i3" ;;
+        *"i3-nagbar"*)                       echo "${prefix}Exit i3" ;;
         'mode "resize"')     echo "${prefix}Enter resize mode" ;;
         'mode "default"')    echo "${prefix}Exit resize mode" ;;
-        *"resize shrink width"*)  echo "${prefix}Shrink width" ;;
-        *"resize grow height"*)   echo "${prefix}Grow height" ;;
-        *"resize shrink height"*) echo "${prefix}Shrink height" ;;
-        *"resize grow width"*)    echo "${prefix}Grow width" ;;
+        *"resize shrink width"*)             echo "${prefix}Shrink width" ;;
+        *"resize grow height"*)              echo "${prefix}Grow height" ;;
+        *"resize shrink height"*)            echo "${prefix}Shrink height" ;;
+        *"resize grow width"*)               echo "${prefix}Grow width" ;;
         *"set-sink-volume"*+*) echo "${prefix}Volume up" ;;
         *"set-sink-volume"*-*) echo "${prefix}Volume down" ;;
-        *"set-sink-mute"*)     echo "${prefix}Mute audio" ;;
-        *"set-source-mute"*)   echo "${prefix}Mute mic" ;;
+        *"set-sink-mute"*)                   echo "${prefix}Mute audio" ;;
+        *"set-source-mute"*)                 echo "${prefix}Mute mic" ;;
         *)
             local clean="${cmd#exec --no-startup-id }"
             clean="${clean#exec }"

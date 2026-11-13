@@ -7,7 +7,10 @@ configuration {
     display-drun: "   Apps ";
 }
 
-/* Font: active font module (scripts/font-picker.sh, $mod+Shift+f) */
+/* Font: active font module (scripts/menu-font.sh, $mod+Shift+f) */
 @import "~/.cache/theme/rofi-font.rasi"
+
+/* UI scale: DPI (scripts/ui-scale.sh, $mod+Shift+plus/minus) */
+@import "~/.cache/theme/ui-scale.rasi"
 
 @theme "theme"
