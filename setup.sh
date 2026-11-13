@@ -56,7 +56,7 @@ sudo nala install -y pipewire pipewire-pulse pipewire-alsa wireplumber pulseaudi
 systemctl --user enable --now pipewire pipewire-pulse wireplumber 2>/dev/null || true
 
 echo "==> Installing applications & CLI tools (including JQ and NPM)..."
-sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc fastfetch thunar btop jq npm playerctl
+sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fuse picom psmisc fastfetch thunar btop jq npm playerctl maim xclip xdg-user-dirs dunst libnotify-bin yad
 
 # --- SPOTIFY (official apt repo; installs /usr/share/applications/spotify.desktop so it shows up in Rofi) ---
 echo "==> Installing Spotify from the official repository..."
@@ -172,7 +172,7 @@ cat <<EOF > "$HOME/.local/share/applications/thorium.desktop"
 [Desktop Entry]
 Name=Thorium Browser
 GenericName=Web Browser
-Exec=$HOME/.local/bin/thorium --no-sandbox --no-default-browser-check %U
+Exec=$HOME/.local/bin/thorium --no-default-browser-check %U
 Terminal=false
 Type=Application
 Icon=thorium
@@ -329,7 +329,7 @@ echo "==> Creating symlinks for configuration directories..."
 CONFIG_DIR="$HOME/.config"
 mkdir -p "$CONFIG_DIR"
 
-APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "btop")
+APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "btop" "dunst")
 
 for app in "${APPS[@]}"; do
     TARGET_DIR="$CONFIG_DIR/$app"
@@ -351,6 +351,18 @@ if [ ! -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && [ -f "$DOTFILES_DIR/i3/hotkeys.de
 elif [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/lock.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
     sed -i '/hotkey-menu\.sh/a bindsym $mod+Shift+x exec --no-startup-id ~/dotfiles/scripts/lock.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
     echo "[OK] Added screen lock hotkey (\$mod+Shift+x) to existing i3/hotkeys.conf."
+fi
+
+# Migrate existing hotkeys.conf files: add the area screenshot hotkey once
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/screenshot.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/scripts\/lock\.sh/a bindsym Control+Shift+t exec --no-startup-id ~/dotfiles/scripts/screenshot.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Added screenshot hotkey (Control+Shift+t) to existing i3/hotkeys.conf."
+fi
+
+# Migrate existing hotkeys.conf files: add the notification hotkeys once
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/notifications.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/scripts\/lock\.sh/a bindsym $mod+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh toggle\nbindsym $mod+Shift+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh menu' "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Added notification hotkeys (\$mod+n / \$mod+Shift+n) to existing i3/hotkeys.conf."
 fi
 
 # ==========================================

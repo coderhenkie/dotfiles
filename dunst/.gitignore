@@ -1,0 +1,4 @@
+# Machine-local / generated drop-ins:
+#   99-color-engine.conf -> ~/.cache/theme/dunst.conf (apply-theme.sh)
+#   50-muted-apps.conf   (scripts/notifications.sh)
+dunstrc.d/

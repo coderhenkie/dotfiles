@@ -18,6 +18,13 @@ bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/ai-theme.sh
 bindsym $mod+m exec --no-startup-id ~/dotfiles/scripts/hotkey-menu.sh
 bindsym $mod+Shift+x exec --no-startup-id ~/dotfiles/scripts/lock.sh
 
+# Notifications: toggle silent mode / open notification menu
+bindsym $mod+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh toggle
+bindsym $mod+Shift+n exec --no-startup-id ~/dotfiles/scripts/notifications.sh menu
+
+# Area screenshot -> ~/Pictures + clipboard
+bindsym Control+Shift+t exec --no-startup-id ~/dotfiles/scripts/screenshot.sh
+
 # Volume controls (managed via PulseAudio / PipeWire; Polybar handles status display)
 bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +10%
 bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -10%
