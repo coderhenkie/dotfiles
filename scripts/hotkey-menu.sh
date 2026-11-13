@@ -85,6 +85,10 @@ describe_action() {
         *hotkey-menu.sh*)    echo "${prefix}Hotkey menu" ;;
         *lock.sh*)           echo "${prefix}Lock screen" ;;
         *screenshot.sh*)     echo "${prefix}Screenshot (area)" ;;
+        *power-menu.sh*)     echo "${prefix}Power menu" ;;
+        *clipboard.sh*)      echo "${prefix}Clipboard history" ;;
+        *calculator.sh*)     echo "${prefix}Calculator" ;;
+        *emoji.sh*)          echo "${prefix}Emoji picker" ;;
         *"notifications.sh toggle"*) echo "${prefix}Silent mode (notifications)" ;;
         *"notifications.sh menu"*)   echo "${prefix}Notification menu" ;;
         *toggle-modkey.sh*)  echo "${prefix}Switch Mod key" ;;

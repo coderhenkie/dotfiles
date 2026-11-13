@@ -2,19 +2,34 @@ Act as an expert Linux System Architect, Bash developer, and ricing specialist. 
 
 Below is the current status, architecture, and configuration history of our project. Read this carefully and use it as context for all subsequent requests.
 
+### 0. Instructions for AI Assistants (read first)
+- **Passwordless sudo is a VM-only testing convenience. NEVER integrate it into the setup.** The development VM has `/etc/sudoers.d/99-sudo-nopasswd` (`%sudo ALL=(ALL:ALL) NOPASSWD: ALL`) so AI assistants can install packages and test changes without a password prompt.
+- Never add `NOPASSWD`, files in `/etc/sudoers.d/`, `visudo` edits, or any other sudo/privilege changes to `setup.sh`, `scripts/`, or any other tracked file. `setup.sh` must keep using plain `sudo` so a real machine always asks for the password.
+- Do not assume passwordless sudo exists on other machines; scripts must work (and fail safely) when `sudo` prompts for a password.
+
 ### 1. Project Goal
 A bulletproof, 100% reproducible dotfiles setup for Debian 13 (Trixie) with the i3 window manager. With a single command (`setup.sh`), a minimal Debian installation is transformed into a fully configured, keyboard-driven environment (Vim-style) powered by a central dynamic Color Engine.
 
 ### 2. Installed Applications: What, Where & Why
 Most software is installed via the `setup.sh` script using `nala` (standard `/usr/bin/`). Specific tools have dedicated locations:
 
-*   **Package Management & Base**: `nala` (faster apt frontend with parallel downloads), `curl`, `git`, `wget`, `unzip`, `jq`, `npm`, `psmisc`.
+*   **Package Management & Base**: `nala` (faster apt frontend with parallel downloads), `curl`, `git`, `wget`, `unzip`, `jq`, `psmisc`, and `unattended-upgrades` (daily automatic Debian security & point-release updates via `/etc/apt/apt.conf.d/20auto-upgrades`).
 *   **Display & Window Manager**: `xserver-xorg`, `xinit`, `lightdm` & `lightdm-gtk-greeter` (login manager), `light-locker` (screen locker), `i3` (tiling window manager), `picom` (compositor for transparency, shadows, and rounded corners).
 *   **Core Desktop Apps**:
     *   `kitty`: Fast, GPU-accelerated terminal.
     *   `thunar`: Lightweight GTK3 file manager.
     *   `polybar`: Modular dual status bar (top & bottom).
     *   `rofi`: Application launcher and interactive menu engine for theme selection, wallpaper picking, and live hotkey management.
+*   **Desktop Essentials** (`setup.sh` section 3.5):
+    *   `network-manager` & `network-manager-gnome`: Wi-Fi/VPN management with the `nm-applet` tray icon. Interfaces listed in `/etc/network/interfaces` (e.g. the installer's wired/SSH config) stay with ifupdown and are left untouched; `setup.sh` only prints a hint when Wi-Fi is configured there.
+    *   `mate-polkit`: Polkit agent (`/usr/libexec/polkit-mate-authentication-agent-1`, started by i3) so GUI apps can ask for the admin password (Thunar mounts, Timeshift). Replaces the auto-installed `ukui-polkit`, which never starts outside UKUI/MATE.
+    *   `zathura` (+ `zathura-pdf-poppler`), `imv`, `mpv`: PDF viewer (vim keys, Color Engine themed), image viewer, and audio/video player, set as defaults by `scripts/default-apps.sh`.
+    *   `thunar-archive-plugin` & `xarchiver`: "Extract here" / "Create archive" in Thunar. `gvfs-backends`: phones (MTP), SMB/SFTP shares and trash support in Thunar.
+    *   `qalc`, `xdotool`, `unicode-data`, `fonts-noto-color-emoji`: Back-ends for the Rofi calculator and emoji picker.
+    *   `autorandr` & `arandr`: Saved monitor profiles that switch automatically on plug/unplug (`autorandr --save <name>`), plus a GUI to arrange screens.
+    *   `timeshift`: System snapshots (configure the snapshot location in its GUI; mind the free disk space).
+    *   `earlyoom` & `zram-tools`: Low-memory protection: zstd-compressed swap in RAM (50%) and earlyoom, which kills the biggest Thorium/Obsidian/Spotify process before the desktop freezes.
+    *   Hardware-dependent (auto-detected by `setup.sh`): `tlp` only when a battery exists (`/sys/class/power_supply/BAT*`), `bluez` & `blueman` only when a Bluetooth controller exists (`/sys/class/bluetooth` or a USB class `e0/01/01` interface), `fwupd` only on bare metal (`systemd-detect-virt`).
 *   **Theming & System Tools**:
     *   `feh`: Lightweight image viewer used exclusively to set desktop wallpapers.
     *   `fastfetch` & `btop`: Modern system information and resource monitoring in the terminal.
@@ -24,15 +39,15 @@ Most software is installed via the `setup.sh` script using `nala` (standard `/us
     *   `fontconfig` & *JetBrainsMono Nerd Font*: Installed in `~/.local/share/fonts/` for terminal and Polybar icons.
 *   **Custom Installations (Outside APT)**:
     *   `Neovim`: Installed as an AppImage in `~/appimages/nvim.appimage` with a symlink to `~/.local/bin/nvim` (requires `libfuse2` and `fuse`) to ensure a modern release independent of Debian's release cycle.
-    *   `Obsidian`: Latest x86_64 AppImage fetched automatically via the GitHub API (`jq`), placed in `~/appimages/obsidian.appimage` with a symlink to `~/.local/bin/obsidian` and a `.desktop` entry (with `--no-sandbox`) in `~/.local/share/applications/obsidian.desktop` for Rofi.
-    *   `Thorium Browser`: High-performance Chromium fork fetched automatically as an AppImage (`AVX2` or `SSE4` based on `/proc/cpuinfo` detection) via the GitHub API into `~/appimages/thorium.appimage`, symlinked to `~/.local/bin/thorium` with a `.desktop` entry (no `--no-sandbox`: Debian 13 allows unprivileged user namespaces, so Chromium's sandbox works inside the AppImage) in `~/.local/share/applications/thorium.desktop` for Rofi. Configured with automatic installation of 4 Chrome Web Store extensions (`Thorium Material Dark Theme`, `Bitwarden`, `Ghostery`, and `Vimium`) and GTK+ Color Engine integration.
+    *   `Obsidian`: Latest x86_64 AppImage fetched automatically via the GitHub API (`jq`), placed in `~/appimages/obsidian.appimage` with a symlink to `~/.local/bin/obsidian` and a `.desktop` entry (without `--no-sandbox`; Electron's sandbox works on Debian 13) in `~/.local/share/applications/obsidian.desktop` for Rofi.
+    *   `Thorium Browser`: High-performance Chromium fork installed and kept up to date by `scripts/update-thorium.sh` (`AVX2` or `SSE4` based on `/proc/cpuinfo` detection) into `~/appimages/thorium.appimage` (installed version in `~/appimages/thorium.version`). It picks the newest build from the official `Alex313031/Thorium` repo (Linux builds stalled at M138) or the collaborator builds in `gz83/thorium` (linked from the official release notes), verifies the SHA-256, and runs from `setup.sh` and at every i3 login, symlinked to `~/.local/bin/thorium` with a `.desktop` entry (no `--no-sandbox`: Debian 13 allows unprivileged user namespaces, so Chromium's sandbox works inside the AppImage) in `~/.local/share/applications/thorium.desktop` for Rofi. Configured with automatic installation of 4 Chrome Web Store extensions (`Thorium Material Dark Theme`, `Bitwarden`, `Ghostery`, and `Vimium`) and GTK+ Color Engine integration.
     *   `Herdr`: Installed via `https://herdr.dev/install.sh`.
     *   `Antigravity CLI`: Installed via `curl -fsSL https://antigravity.google/cli/install.sh | bash`.
     *   `Pywal`: AI color extractor installed in a dedicated Python virtual environment (`~/.local/pywal-venv`) via `pip` (with `python3-pip`, `python3-venv`, `imagemagick`), symlinked to `~/.local/bin/wal`.
 
 ### 3. Architecture & Directory Structure
 - **Master Repo (`~/dotfiles`)**: Contains all static configurations, 15 curated wallpapers (`wallpapers/`), preset themes (`themes/`), and Bash scripts (`scripts/`). Managed via Git. The master `setup.sh` script pulls the latest version before applying configurations.
-- **Symlinks (`~/.config/`)**: Directories for `i3`, `kitty`, `polybar`, `feh`, `rofi`, `nvim`, `picom`, `btop`, and `dunst` are symlinked directly to `~/dotfiles/` by `setup.sh` (empty directories `nvim` and `feh` are tracked via `.gitkeep`).
+- **Symlinks (`~/.config/`)**: Directories for `i3`, `kitty`, `polybar`, `feh`, `rofi`, `nvim`, `picom`, `btop`, `dunst`, `zathura`, and `autorandr` are symlinked directly to `~/dotfiles/` by `setup.sh` (empty directories `nvim` and `feh` are tracked via `.gitkeep`).
 - **Dynamic Cache (`~/.cache/theme/`)**: To keep the Git repository clean, tracked dotfiles contain NO hardcoded colors. All applications source or import their active colors from generated files inside `~/.cache/theme/`.
 
 ### 4. Dotfiles & Specific Configuration Details
@@ -45,7 +60,7 @@ To support the dynamic Color Engine and smooth workflow, the following configura
   - CapsLock and Escape are swapped via `setxkbmap -option caps:swapescape`.
   - Runs `light-locker` (`--lock-after-screensaver=5 --no-late-locking --lock-on-suspend`) with a 5-minute X11 idle lock timer while keeping DPMS monitor power-off disabled (`xset s 300 5 -dpms`) to prevent VM lock freezes.
   - Restores the last selected wallpaper via `exec_always --no-startup-id ~/.fehbg`.
-  - Custom keybindings: `$mod+t` for the AI wallpaper theme generator (`scripts/ai-theme.sh`), `$mod+Shift+w` for the preset theme selector (`scripts/theme-selector.sh`), `$mod+m` for the interactive Rofi Hotkey Menu (`scripts/hotkey-menu.sh`), `$mod+Shift+x` for locking the screen (`scripts/lock.sh`), `Control+Shift+t` for an area screenshot (`scripts/screenshot.sh`), and `$mod+n` / `$mod+Shift+n` for silent mode and the notification menu (`scripts/notifications.sh`).
+  - Custom keybindings: `$mod+t` for the AI wallpaper theme generator (`scripts/ai-theme.sh`), `$mod+Shift+w` for the preset theme selector (`scripts/theme-selector.sh`), `$mod+m` for the interactive Rofi Hotkey Menu (`scripts/hotkey-menu.sh`), `$mod+Shift+x` for locking the screen (`scripts/lock.sh`), `Control+Shift+t` for an area screenshot (`scripts/screenshot.sh`), `$mod+n` / `$mod+Shift+n` for silent mode and the notification menu (`scripts/notifications.sh`), `$mod+c` for clipboard history (`scripts/clipboard.sh`), `$mod+equal` for the calculator (`scripts/calculator.sh`), `$mod+Shift+period` for the emoji picker (`scripts/emoji.sh`), and `$mod+Shift+e` for the power menu (`scripts/power-menu.sh`, replaces the old `i3-nagbar` exit prompt).
 - **LightDM GTK Greeter & `light-locker` (`scripts/lock.sh` & `/etc/lightdm/lightdm-gtk-greeter.conf`)**:
   - `setup.sh` configures `/etc/lightdm/lightdm-gtk-greeter.conf` with `theme-name=ColorEngine`, `icon-theme-name=ColorEngine`, `font-name=JetBrainsMono Nerd Font 10`, `background=/usr/share/themes/ColorEngine/wallpaper`, and `screensaver-timeout=0`, plus `/etc/lightdm/lightdm.conf.d/50-color-engine.conf` (`setxkbmap -option caps:swapescape`).
   - `/usr/share/themes/ColorEngine` and `/usr/share/icons/ColorEngine` are owned by `$USER` with world-readable (`755`/`644`) permissions so `scripts/apply-theme.sh` and `scripts/lock.sh` can update the lock/login screen GTK3 CSS (`#panel_window`, `#login_window`, `#power_window`, `#prompt_entry`, `#login_button`, `3px` accent border, `4px` corner radius), dynamic folder/status icons, and active `feh` wallpaper (`~/.fehbg`) live in user-space without requiring `sudo`.
@@ -82,6 +97,8 @@ To support the dynamic Color Engine and smooth workflow, the following configura
 - **btop (`btop/btop.conf` & `btop/.gitignore`)**:
   - Configured with `vim_keys = True` and `color_theme = "color_engine"`.
   - `~/.config/btop/themes/color_engine.theme` is symlinked to `~/.cache/theme/btop.theme` (ignored in Git along with `btop.log` via `btop/.gitignore`), and running `btop` instances live-reload via `SIGUSR2`.
+- **Zathura (`zathura/zathurarc`)**: JetBrainsMono font, clipboard selection, best-fit; `include colors.zathurarc`, a symlink to `~/.cache/theme/zathurarc` generated by `apply-theme.sh` (ignored in Git).
+- **autorandr (`autorandr/postswitch`)**: Hook that re-launches Polybar, re-applies the wallpaper and sends a notification after every monitor layout switch. Saved profiles are machine-specific and ignored in Git (`autorandr/.gitignore`).
 - **Dunst (`dunst/dunstrc`)**:
   - Minimal notifications in the bottom-right corner just above the bottom Polybar (`offset = (10, 37)`), `2px` accent frame, `4px` corners, JetBrainsMono Nerd Font, image thumbnails (e.g. screenshots), click to dismiss.
   - Per-app muting lives in `dunstrc.d/50-muted-apps.conf` (machine-local, managed by `scripts/notifications.sh`): muted apps get a `skip_display` rule, so they never pop up but stay in the history.
@@ -93,9 +110,11 @@ The scripts translate the 16 colors generated by Pywal (or preset themes in `~/d
 - `BG` (Background, color0)
 - `FG` (Foreground/Text, color15)
 - `ACCENT` (Primary accent color, color4)
-The central script `scripts/apply-theme.sh` computes an extended palette of derived shades in pure Bash (`BG_ALT`, `BG_VISUAL`, `FG_MUTED`, `ACCENT_SOFT`, `ACCENT_DIM`, and harmonic ANSI colors `ANSI_RED`, `ANSI_GREEN`, `ANSI_YELLOW`, `ANSI_CYAN`), writes all 9 cache files (`polybar.ini`, `kitty.conf`, `i3.conf`, `rofi.rasi`, `gtk.css`, `nvim.lua`, `herdr.toml`, `btop.theme`, `dunst.conf`), and live-reloads Kitty (`pkill -USR1 -x kitty`), btop (`pkill -USR2 -x btop`), dunst (`dunstctl reload`), i3 & Polybar (`i3-msg restart`), and Herdr (`herdr server reload-config`). Open Neovim sessions reload automatically via their filesystem watcher.
+The central script `scripts/apply-theme.sh` computes an extended palette of derived shades in pure Bash (`BG_ALT`, `BG_VISUAL`, `FG_MUTED`, `ACCENT_SOFT`, `ACCENT_DIM`, and harmonic ANSI colors `ANSI_RED`, `ANSI_GREEN`, `ANSI_YELLOW`, `ANSI_CYAN`), writes all 10 cache files (`polybar.ini`, `kitty.conf`, `i3.conf`, `rofi.rasi`, `gtk.css`, `nvim.lua`, `herdr.toml`, `btop.theme`, `dunst.conf`, `zathurarc`), and live-reloads Kitty (`pkill -USR1 -x kitty`), btop (`pkill -USR2 -x btop`), dunst (`dunstctl reload`), i3 & Polybar (`i3-msg restart`), and Herdr (`herdr server reload-config`). Open Neovim sessions reload automatically via their filesystem watcher.
 
 ### 6. Overview of Scripts
+- **`scripts/lib/github-download.sh`**: Shared helpers (`gh_find_asset`, `gh_download_verified`, `gh_install_latest`) used by `setup.sh` and `update-thorium.sh`. Every GitHub release download (Neovim, Obsidian, Thorium, Spicetify, JetBrainsMono Nerd Font) goes to a private temp file and is only installed when its SHA-256 matches the digest GitHub publishes; downloads without a published checksum are refused.
+- **`scripts/update-thorium.sh`**: Installs/updates Thorium to the newest checksum-verified AppImage (see Thorium above). `--quiet` (used at i3 login) only sends a notification when it actually updated.
 - **`setup.sh` (Master Bootstrapper)**: Installs base tools (`nala`, `curl`, `git`), pulls or clones the latest `~/dotfiles` repository, and immediately replaces its own process (`exec bash "$DOTFILES_DIR/setup.sh"`) via the `DOTFILES_SETUP_RELOADED=1` guard so the remaining steps always execute using the newly downloaded `setup.sh`. It then installs all packages, AppImages, and CLI tools, configures the Pywal virtualenv, creates symlinks, and invokes `scripts/apply-theme.sh` for the Dracula bootstrap theme.
 - **`scripts/apply-theme.sh`**: Central Color Engine that generates all theme files in `~/.cache/theme/` from `<BG> <FG> <ACCENT>` and live-reloads the desktop.
 - **`scripts/ai-theme.sh`**: Opens Rofi (`$mod+t`) to pick a wallpaper from `~/dotfiles/wallpapers/`, sets it via `feh`, extracts colors with `wal`, and passes them to `apply-theme.sh`.
@@ -105,10 +124,20 @@ The central script `scripts/apply-theme.sh` computes an extended palette of deri
 - **`scripts/lock.sh`**: Syncs the active `feh` wallpaper (`~/.fehbg`) to the `ColorEngine` LightDM theme directory, ensures `light-locker` is running, and locks the session via `light-locker-command -l` (with `dm-tool lock` fallback). Symlinked to `~/.local/bin/lock` and bound to `$mod+Shift+x`.
 - **`scripts/lockscreen-setup.sh`**: One-time (sudo) provisioning of the LightDM side: creates user-owned `/usr/share/themes/ColorEngine` & `/usr/share/icons/ColorEngine`, writes `/etc/lightdm/lightdm-gtk-greeter.conf` and `lightdm.conf.d/50-color-engine.conf`, installs the font system-wide, then re-applies the active palette from `~/.cache/theme/current.theme`. Called by `setup.sh` (section 8.5). The generated `gtk.css` defines `@lightdm-gtk-greeter-override-defaults` so the greeter's built-in colors drop to FALLBACK priority and the Color Engine styling wins.
 - **`scripts/screenshot.sh`**: Area screenshot (`Control+Shift+t`): drag a rectangle or click a window (`maim -s`, selection highlighted in the active `ACCENT` color), saves `~/Pictures/screenshot_<date>_<time>.png`, copies it to the clipboard as `image/png` via `xclip`, and shows a `notify-send` notification. `Esc`/right-click cancels.
+- **`scripts/power-menu.sh`**: Rofi power menu (`$mod+Shift+e`): lock, suspend, log out, reboot, shut down (the last three ask for confirmation).
+- **`scripts/clipboard.sh`**: Clipboard history. `daemon` (started by i3) keeps the last 50 text entries in `$XDG_RUNTIME_DIR/clipboard-history` (RAM only, mode `700`, wiped at logout, images skipped); `menu` (`$mod+c`) re-copies an entry or clears the history. Note: copied passwords stay in the history until cleared or logout.
+- **`scripts/calculator.sh`**: Rofi calculator on `qalc` (`$mod+equal`): units, currencies and percentages; select the result to copy it.
+- **`scripts/emoji.sh`**: Rofi emoji picker (`$mod+Shift+period`) built from `/usr/share/unicode/emoji/emoji-test.txt` (cached in `~/.cache/emoji-list.txt`); types the emoji via `xdotool` and copies it.
+- **`scripts/battery-notify.sh`**: Low-battery warnings via dunst at 20% (normal) and 10%/5% (critical) while discharging; started by i3 and exits immediately on machines without a battery.
+- **`scripts/default-apps.sh`**: Sets default applications via `xdg-mime` (web → Thorium, PDF/EPUB → Zathura, images → imv, audio/video → mpv, folders → Thunar); only for apps that are installed.
 - **`scripts/notifications.sh`**: Notification manager. `toggle` (`$mod+n`) switches silent mode (dunst pause: notifications are held and shown when silent mode is turned off); `menu` (`$mod+Shift+n`) opens a Rofi menu to toggle silent mode, re-show the last notification, clear the history, and mute/unmute any app that has sent a notification (or type an app name to mute it); `status` feeds the Polybar bell module.
 - **`scripts/calendar.sh`**: Polybar clock click handler. Toggles a `yad` GTK calendar (themed by `gtk.css`, with week numbers and previous/next month arrows) in the top-right corner of the focused monitor. Click the clock again or press `Esc` to close it.
 - **`scripts/polybar-disk.sh`** & **`scripts/polybar-ip.sh`**: Disk usage and local IPv4 helpers for the bottom Polybar (kept as scripts so `config.ini` needs no escaping).
 - **`scripts/polybar-gpu.sh`**: Multi-vendor GPU utilization helper for the bottom Polybar (`NVIDIA`, `AMD`, and `Intel` via DRM sysfs), with automatic VM vs. baremetal fallback detection.
 
-### 7. Current Status
+### 7. Open Ideas / TODO
+- **CLI tools (postponed by the user, come back to this):** `fzf`, `ripgrep`, `fd-find`, `bat`, `zoxide` (faster search, previews and directory jumping in the terminal).
+- **Night light:** `redshift` (warmer screen colors in the evening), ideally with a Polybar toggle. Not installed yet.
+
+### 8. Current Status
 All configuration files, scripts, comments, UI prompts, and documentation across `~/dotfiles` are uniformly written in English, validated, tested, and ready for GitHub.

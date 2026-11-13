@@ -35,6 +35,16 @@ exec_always --no-startup-id xset s 300 5 -dpms
 # NetworkManager applet
 exec --no-startup-id nm-applet
 
+# Polkit agent: password prompts for GUI apps that need admin rights (Thunar mounts, Timeshift, ...)
+exec --no-startup-id /usr/libexec/polkit-mate-authentication-agent-1
+
+# Clipboard history watcher ($mod+c) and low-battery warnings (exits on machines without a battery)
+exec --no-startup-id ~/dotfiles/scripts/clipboard.sh daemon
+exec --no-startup-id ~/dotfiles/scripts/battery-notify.sh
+
+# Keep Thorium up to date (checksum-verified; notifies only when it updated)
+exec --no-startup-id ~/dotfiles/scripts/update-thorium.sh --quiet
+
 # Launch Polybar (replaces default i3bar)
 exec_always --no-startup-id ~/.config/polybar/launch.sh
 
