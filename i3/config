@@ -14,6 +14,8 @@ font pango:JetBrainsMono Nerd Font 10
 default_border pixel 3
 default_floating_border pixel 3
 for_window [class="^.*"] border pixel 3
+# Polybar calendar popup (scripts/calendar.sh) floats at its requested position
+for_window [class="^Calendar$"] floating enable, sticky enable
 gaps inner 4
 gaps outer 1
 
