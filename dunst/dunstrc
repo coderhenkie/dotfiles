@@ -20,7 +20,7 @@
     indicate_hidden = true
 
     # Look
-    font = JetBrainsMono Nerd Font 8
+    font = Iosevka Nerd Font 8
     padding = 6
     horizontal_padding = 8
     text_icon_padding = 8

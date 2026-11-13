@@ -303,6 +303,26 @@ if [ ! -f "$HOME/.config/thorium/Default/Preferences" ]; then
 EOF
 fi
 
+# Thorium default web fonts -> Iosevka (pages without their own web fonts use these).
+# Thorium rewrites Preferences on exit, so this only runs while Thorium is closed.
+THORIUM_PREFS="$HOME/.config/thorium/Default/Preferences"
+if [ -f "$THORIUM_PREFS" ] && ! pgrep -x thorium >/dev/null; then
+    THORIUM_TMP=$(mktemp "$THORIUM_PREFS.XXXXXX")
+    if jq '.webkit.webprefs.fonts = ((.webkit.webprefs.fonts // {}) + {
+            "standard":  {"Zyyy": "Iosevka Nerd Font"},
+            "sansserif": {"Zyyy": "Iosevka Nerd Font"},
+            "serif":     {"Zyyy": "Iosevka Nerd Font"},
+            "fixed":     {"Zyyy": "Iosevka Nerd Font Mono"}
+        })' "$THORIUM_PREFS" > "$THORIUM_TMP"; then
+        mv "$THORIUM_TMP" "$THORIUM_PREFS"
+        echo "[OK] Thorium default web fonts set to Iosevka."
+    else
+        rm -f "$THORIUM_TMP"
+    fi
+elif pgrep -x thorium >/dev/null; then
+    echo "[!] Thorium is running: close it and re-run setup.sh to set its default web fonts."
+fi
+
 # ==========================================
 # 4.5 Extra CLI Tools: Herdr & Antigravity CLI
 # ==========================================
@@ -360,30 +380,44 @@ if ! grep -q "$HOME/.local/bin" "$HOME/.bashrc"; then
 fi
 
 # ==========================================
-# 5. Install Nerd Fonts (User & System-wide for LightDM)
+# 5. Install Iosevka Nerd Font (User & System-wide for LightDM)
 # ==========================================
-echo "==> Installing JetBrainsMono Nerd Font..."
+echo "==> Installing Iosevka Nerd Font..."
 FONT_DIR="$HOME/.local/share/fonts"
-SYS_FONT_DIR="/usr/local/share/fonts/JetBrainsMono"
+SYS_FONT_DIR="/usr/local/share/fonts/Iosevka"
 
-if [ ! -d "$FONT_DIR/JetBrainsMono" ]; then
-    FONT_ZIP=$(mktemp -d)/JetBrainsMono.zip
-    if gh_install_latest "ryanoasis/nerd-fonts" '^JetBrainsMono\.zip$' "$FONT_ZIP"; then
-        mkdir -p "$FONT_DIR/JetBrainsMono"
-        unzip -qo "$FONT_ZIP" -d "$FONT_DIR/JetBrainsMono"
-        fc-cache -f
-        echo "[OK] Font installed in ~/.local/share/fonts."
-    else
-        echo "[!] JetBrainsMono Nerd Font could not be installed (continuing setup)."
-    fi
-    rm -rf "$(dirname "$FONT_ZIP")"
+# Iosevka replaced JetBrainsMono: remove the old copies (user + system-wide for LightDM)
+if [ -d "$FONT_DIR/JetBrainsMono" ] || [ -d /usr/local/share/fonts/JetBrainsMono ]; then
+    rm -rf "$FONT_DIR/JetBrainsMono"
+    sudo rm -rf /usr/local/share/fonts/JetBrainsMono
+    echo "[OK] Removed the old JetBrainsMono Nerd Font."
 fi
 
-if [ ! -d "$SYS_FONT_DIR" ]; then
+if [ ! -f "$FONT_DIR/Iosevka/IosevkaNerdFont-Regular.ttf" ]; then
+    # The .tar.xz has the same fonts as the 384 MB .zip in 87 MB. Only Regular/Bold/Italic/BoldItalic
+    # of "Iosevka Nerd Font" (UI, bars, menus) and "Iosevka Nerd Font Mono" (terminal) are kept.
+    FONT_TMP=$(mktemp -d)
+    if gh_install_latest "ryanoasis/nerd-fonts" '^Iosevka\.tar\.xz$' "$FONT_TMP/Iosevka.tar.xz"; then
+        mkdir -p "$FONT_DIR/Iosevka"
+        for style in Regular Bold Italic BoldItalic; do
+            tar -xJf "$FONT_TMP/Iosevka.tar.xz" -C "$FONT_DIR/Iosevka" \
+                "IosevkaNerdFont-$style.ttf" "IosevkaNerdFontMono-$style.ttf"
+        done
+        tar -xJf "$FONT_TMP/Iosevka.tar.xz" -C "$FONT_DIR/Iosevka" LICENSE.md 2>/dev/null || true
+        fc-cache -f
+        echo "[OK] Iosevka Nerd Font installed in ~/.local/share/fonts."
+    else
+        echo "[!] Iosevka Nerd Font could not be installed (continuing setup)."
+    fi
+    rm -rf "$FONT_TMP"
+fi
+
+# The LightDM greeter runs as the 'lightdm' user and cannot see ~/.local/share/fonts
+if [ -d "$FONT_DIR/Iosevka" ] && [ ! -d "$SYS_FONT_DIR" ]; then
     sudo mkdir -p "$SYS_FONT_DIR"
-    sudo cp -rf "$FONT_DIR/JetBrainsMono/"* "$SYS_FONT_DIR/"
+    sudo cp -rf "$FONT_DIR/Iosevka/"* "$SYS_FONT_DIR/"
     sudo chmod -R a+rX "$SYS_FONT_DIR"
-    sudo fc-cache -fv
+    sudo fc-cache -f
     echo "[OK] Font installed system-wide for LightDM."
 fi
 
@@ -405,7 +439,7 @@ echo "==> Creating symlinks for configuration directories..."
 CONFIG_DIR="$HOME/.config"
 mkdir -p "$CONFIG_DIR"
 
-APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "btop" "dunst" "zathura" "autorandr")
+APPS=("i3" "kitty" "polybar" "feh" "rofi" "nvim" "picom" "btop" "dunst" "zathura" "autorandr" "fontconfig")
 
 for app in "${APPS[@]}"; do
     TARGET_DIR="$CONFIG_DIR/$app"

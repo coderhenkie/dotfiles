@@ -17,8 +17,8 @@ DOTFILES_DIR="$HOME/dotfiles"
 CACHE_DIR="$HOME/.cache/theme"
 SYS_THEME_DIR="/usr/share/themes/ColorEngine"
 SYS_ICON_DIR="/usr/share/icons/ColorEngine"
-FONT_DIR="$HOME/.local/share/fonts/JetBrainsMono"
-SYS_FONT_DIR="/usr/local/share/fonts/JetBrainsMono"
+FONT_DIR="$HOME/.local/share/fonts/Iosevka"
+SYS_FONT_DIR="/usr/local/share/fonts/Iosevka"
 
 echo "==> Provisioning LightDM ColorEngine theme directories..."
 sudo mkdir -p "$SYS_THEME_DIR/gtk-3.0" "$SYS_ICON_DIR" /etc/lightdm/lightdm.conf.d
@@ -30,7 +30,7 @@ sudo tee /etc/lightdm/lightdm-gtk-greeter.conf >/dev/null <<EOF
 [greeter]
 theme-name=ColorEngine
 icon-theme-name=ColorEngine
-font-name=JetBrainsMono Nerd Font 10
+font-name=Iosevka Nerd Font 10
 background=$SYS_THEME_DIR/wallpaper
 user-background=false
 xft-antialias=true
@@ -49,8 +49,10 @@ display-setup-script=/usr/bin/setxkbmap -option caps:swapescape
 EOF
 
 # The greeter runs as the 'lightdm' user and cannot see ~/.local/share/fonts
+# (the old JetBrainsMono copy is removed: Iosevka replaced it)
+sudo rm -rf /usr/local/share/fonts/JetBrainsMono
 if [ -d "$FONT_DIR" ] && [ ! -d "$SYS_FONT_DIR" ]; then
-    echo "==> Installing JetBrainsMono Nerd Font system-wide..."
+    echo "==> Installing Iosevka Nerd Font system-wide..."
     sudo mkdir -p "$SYS_FONT_DIR"
     sudo cp -rf "$FONT_DIR/"* "$SYS_FONT_DIR/"
     sudo chmod -R a+rX "$SYS_FONT_DIR"
