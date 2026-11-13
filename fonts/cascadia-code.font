@@ -1,0 +1,7 @@
+# Font module for scripts/font-picker.sh ($mod+Shift+f). Sourced by scripts/lib/fonts.sh.
+FONT_NAME="Cascadia Code"
+FONT_DESCRIPTION="Microsoft's modern terminal font, with ligatures"
+FONT_ASSET="CascadiaCode.tar.xz"              # release asset in github.com/ryanoasis/nerd-fonts (checksum-verified)
+FONT_FILE_PREFIX="CaskaydiaCoveNerdFont"        # files kept: <prefix>-<Style>.ttf and <prefix>Mono-<Style>.ttf
+FONT_FAMILY="CaskaydiaCove Nerd Font"             # UI: Polybar, i3, Rofi, dunst, GTK, LightDM, Zathura, Spotify, web pages
+FONT_FAMILY_MONO="CaskaydiaCove Nerd Font Mono"   # Kitty: every icon exactly one cell wide

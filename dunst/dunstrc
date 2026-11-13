@@ -20,7 +20,7 @@
     indicate_hidden = true
 
     # Look
-    font = Iosevka Nerd Font 8
+    # Font: set by the active font module in dunstrc.d/99-color-engine.conf ($mod+Shift+f)
     padding = 6
     horizontal_padding = 8
     text_icon_padding = 8

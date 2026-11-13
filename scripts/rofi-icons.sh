@@ -3,7 +3,7 @@
 # Rofi Icon Pack Generator (Color Engine)
 # ==========================================
 # Renders one minimal, single-colour icon for every app Rofi can show, using
-# Material Design glyphs from Iosevka Nerd Font, into the icon theme
+# Material Design glyphs from the active Nerd Font, into the icon theme
 # ~/.local/share/icons/ColorEngine-Apps (selected in rofi/config.rasi).
 #
 #   rofi-icons.sh <#hexcolor>
@@ -18,7 +18,9 @@ COLOR="${1:-}"
 [[ "$COLOR" =~ ^#[0-9A-Fa-f]{6}$ ]] || { echo "Usage: $0 <#rrggbb>" >&2; exit 1; }
 
 MAP="$HOME/dotfiles/rofi/app-icons.conf"
-FONT="$HOME/.local/share/fonts/Iosevka/IosevkaNerdFont-Regular.ttf"
+# shellcheck source=lib/fonts.sh
+source "$HOME/dotfiles/scripts/lib/fonts.sh"
+FONT=$(font_file "$(font_active)")   # active font module; every Nerd Font has the same glyphs
 THEME_DIR="$HOME/.local/share/icons/ColorEngine-Apps"
 ICON_DIR="$THEME_DIR/128x128/apps"
 STAMP="$THEME_DIR/.stamp"

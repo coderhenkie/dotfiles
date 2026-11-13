@@ -7,8 +7,7 @@ include ~/.cache/theme/i3.conf
 # Load local hotkeys and $mod configuration (bootstrapped from hotkeys.default, ignored by Git)
 include ~/.config/i3/hotkeys.conf
 
-# Use the installed Iosevka Nerd Font
-font pango:Iosevka Nerd Font 10
+# Font: set by the active font module in ~/.cache/theme/i3.conf (included above, $mod+Shift+f)
 
 # Window borders and subtle gaps between windows
 default_border pixel 3
