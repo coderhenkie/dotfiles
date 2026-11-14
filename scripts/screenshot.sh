@@ -6,7 +6,7 @@
 # Lets you drag a rectangle (or click a window) with the mouse, saves the
 # result as a PNG in ~/Pictures and copies it to the clipboard so it can be
 # pasted anywhere. Press Esc or right-click to cancel.
-# Bound to Control+Shift+t in i3/hotkeys.default.
+# Bound to $mod+Shift+s in i3/hotkeys.default.
 
 for dep in maim xclip; do
     if ! command -v "$dep" >/dev/null 2>&1; then

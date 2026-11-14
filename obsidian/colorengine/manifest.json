@@ -1,0 +1,9 @@
+{
+  "id": "colorengine",
+  "name": "ColorEngine",
+  "version": "1.0.0",
+  "minAppVersion": "1.0.0",
+  "description": "Uses the desktop theme from ~/dotfiles (colors + font) on machines that have it; does nothing elsewhere. Never writes to the vault, so nothing syncs.",
+  "author": "dotfiles",
+  "isDesktopOnly": true
+}
