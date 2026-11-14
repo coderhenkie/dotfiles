@@ -1,0 +1,2 @@
+-- Extra keymaps (LazyVim's defaults: <space> then wait for the which-key popup).
+-- Obsidian keymaps live in lua/plugins/obsidian.lua (<leader>o...).

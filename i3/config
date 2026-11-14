@@ -36,7 +36,7 @@ exec_always --no-startup-id xset s 175 5 -dpms
 # Suspend after 30 minutes locked (bare metal only; exits immediately in a VM)
 exec --no-startup-id ~/dotfiles/scripts/lock-suspend.sh
 
-# NetworkManager: no tray applet; Wi-Fi status/menu is the polybar wifi module (nmtui on click)
+# NetworkManager: no tray applet; Wi-Fi status/menu is the polybar wifi module (click: menu-wifi.sh, right-click: nmtui)
 
 # Polkit agent: password prompts for GUI apps that need admin rights (Thunar mounts, Timeshift, ...)
 exec --no-startup-id /usr/libexec/polkit-mate-authentication-agent-1
@@ -44,6 +44,8 @@ exec --no-startup-id /usr/libexec/polkit-mate-authentication-agent-1
 # Clipboard history watcher ($mod+c) and low-battery warnings (exits on machines without a battery)
 exec --no-startup-id ~/dotfiles/scripts/menu-clipboard.sh daemon
 exec --no-startup-id ~/dotfiles/scripts/battery-notify.sh
+# Obsidian Sync via Obsidian Headless while the app is closed (notes edited in Neovim); hands over to the app's own Sync while it runs
+exec --no-startup-id ~/dotfiles/scripts/obsidian-sync.sh daemon
 
 # Keep Thorium up to date (checksum-verified; notifies only when it updated)
 exec --no-startup-id ~/dotfiles/scripts/update-thorium.sh --quiet

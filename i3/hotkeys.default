@@ -24,7 +24,7 @@ bindsym $mod+n exec --no-startup-id ~/dotfiles/scripts/menu-notifications.sh tog
 bindsym $mod+Shift+n exec --no-startup-id ~/dotfiles/scripts/menu-notifications.sh menu
 
 # Area screenshot -> ~/Pictures + clipboard
-bindsym Control+Shift+t exec --no-startup-id ~/dotfiles/scripts/screenshot.sh
+bindsym $mod+Shift+s exec --no-startup-id ~/dotfiles/scripts/screenshot.sh
 
 # Rofi tools: clipboard history, calculator, emoji picker, font picker
 bindsym $mod+c exec --no-startup-id ~/dotfiles/scripts/menu-clipboard.sh menu

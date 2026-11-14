@@ -646,10 +646,27 @@ local accent_soft = "$ACCENT_SOFT"
 local ansi_red    = "$ANSI_RED"
 local ansi_green  = "$ANSI_GREEN"
 local ansi_yellow = "$ANSI_YELLOW"
+local ansi_cyan   = "$ANSI_CYAN"
+local accent_dim  = "$ACCENT_DIM"
 
 vim.cmd("highlight clear")
 vim.o.background = "dark"
-vim.g.colors_name = "color_engine"
+
+-- Full base16 palette for all plugin highlight groups (LazyVim: pickers, completion, which-key,
+-- statusline, treesitter, diagnostics). Skipped in a plain Neovim without mini.base16.
+local ok, base16 = pcall(require, "mini.base16")
+if ok then
+    base16.setup({
+        palette = {
+            base00 = bg,          base01 = bg_alt,      base02 = bg_visual,   base03 = fg_muted,
+            base04 = "$(blend_hex "$BG" "$FG" 62)", base05 = fg, base06 = "$(blend_hex "$FG" "#ffffff" 10)", base07 = "$(blend_hex "$FG" "#ffffff" 25)",
+            base08 = ansi_red,    base09 = "$(blend_hex "$ANSI_RED" "$ANSI_YELLOW" 50)", base0A = ansi_yellow, base0B = ansi_green,
+            base0C = ansi_cyan,   base0D = accent,      base0E = accent_soft, base0F = accent_dim,
+        },
+        use_cterm = false,
+    })
+end
+vim.g.colors_name = "colorengine"
 
 local hl = function(group, opts)
     vim.api.nvim_set_hl(0, group, opts)
@@ -702,6 +719,33 @@ hl("Keyword",      { fg = accent, bold = true })
 hl("PreProc",      { fg = accent_soft })
 hl("Type",         { fg = ansi_yellow })
 hl("Special",      { fg = accent_soft })
+
+-- Markdown / Obsidian notes (render-markdown.nvim): every heading level its own color, as text color
+-- and as a full-width bar in a dark tint of it, so ## and ### are easy to tell apart (a terminal
+-- can't make headings bigger)
+local headings = {
+    { "$ACCENT",      "$(blend_hex "$BG" "$ACCENT" 24)" },      -- #
+    { "$ANSI_CYAN",   "$(blend_hex "$BG" "$ANSI_CYAN" 18)" },   -- ##
+    { "$ANSI_GREEN",  "$(blend_hex "$BG" "$ANSI_GREEN" 15)" },  -- ###
+    { "$ANSI_YELLOW", "$(blend_hex "$BG" "$ANSI_YELLOW" 13)" }, -- ####
+    { "$ACCENT_SOFT", "$(blend_hex "$BG" "$ACCENT_SOFT" 11)" }, -- #####
+    { fg_muted,       bg_alt },                                 -- ######
+}
+for i, c in ipairs(headings) do
+    hl("@markup.heading." .. i .. ".markdown", { fg = c[1], bold = true })
+    hl("RenderMarkdownH" .. i,                  { fg = c[1], bold = true })
+    hl("RenderMarkdownH" .. i .. "Bg",          { fg = c[1], bg = c[2], bold = true })
+end
+hl("@markup.link.label",     { fg = accent_soft, underline = true })
+hl("@markup.link.url",       { fg = fg_muted, underline = true })
+hl("@markup.list.checked",   { fg = ansi_green })
+hl("@markup.list.unchecked", { fg = accent })
+hl("RenderMarkdownCode",     { bg = bg_alt })
+hl("RenderMarkdownTableHead", { fg = accent })
+hl("RenderMarkdownTableRow",  { fg = fg_muted })
+hl("RenderMarkdownCancelled", { fg = fg_muted, strikethrough = true }) -- [~]
+hl("RenderMarkdownImportant", { fg = ansi_red, bold = true })         -- [!]
+hl("RenderMarkdownForwarded", { fg = ansi_cyan })                     -- [>]
 EOF
 
 # ==========================================
@@ -884,6 +928,109 @@ EOF
 # Starship re-reads its config on every prompt: open terminals recolor at the next command
 cat "$HOME/dotfiles/starship/starship.toml" "$CACHE_DIR/starship-palette.toml" > "$CACHE_DIR/starship.toml"
 ln -sf "$CACHE_DIR/starship.toml" "$HOME/.config/starship.toml"
+
+# ==========================================
+# 8.6 Obsidian (~/.cache/theme/obsidian.css, read live by the ColorEngine plugin in obsidian/)
+# ==========================================
+# Outside the vault on purpose: Obsidian Sync never sees it, so switching themes here does not
+# touch the synced appearance settings of other devices. Only Obsidian's built-in CSS variables
+# are set; the plugin switches off the (synced) community theme locally, so this works the same
+# whatever community theme the vault uses.
+hex_rgb() { local h="${1#\#}"; printf '%d, %d, %d' "$((16#${h:0:2}))" "$((16#${h:2:2}))" "$((16#${h:4:2}))"; }
+hex_hsl() { # -> "h s% l%" for Obsidian's --accent-h/s/l
+    local h="${1#\#}"
+    awk -v r="$((16#${h:0:2}))" -v g="$((16#${h:2:2}))" -v b="$((16#${h:4:2}))" 'BEGIN {
+        r/=255; g/=255; b/=255
+        mx = r; if (g > mx) mx = g; if (b > mx) mx = b
+        mn = r; if (g < mn) mn = g; if (b < mn) mn = b
+        l = (mx + mn) / 2; d = mx - mn; hh = 0; s = 0
+        if (d > 0) {
+            s = (l > 0.5) ? d / (2 - mx - mn) : d / (mx + mn)
+            if (mx == r) hh = (g - b) / d + (g < b ? 6 : 0)
+            else if (mx == g) hh = (b - r) / d + 2
+            else hh = (r - g) / d + 4
+            hh *= 60
+        }
+        printf "%d %d%% %d%%", hh + 0.5, s * 100 + 0.5, l * 100 + 0.5
+    }'
+}
+read -r ACC_H ACC_S ACC_L <<< "$(hex_hsl "$ACCENT")"
+OBS_ORANGE=$(blend_hex "$ANSI_RED" "$ANSI_YELLOW" 50)
+OBS_PURPLE=$(blend_hex "$ACCENT" "#bd93f9" 30)
+OBS_BLUE=$(blend_hex "$ACCENT_DIM" "#8be9fd" 35)
+OBS_SIDEBAR=$(blend_hex "$BG" "#000000" 18)
+
+cat <<EOF > "$CACHE_DIR/obsidian.css"
+/* Generated by ~/dotfiles/scripts/apply-theme.sh - do not edit (rewritten on every theme change) */
+body.colorengine {
+    /* Base scale: Obsidian derives most backgrounds, borders and text colors from these */
+    --color-base-00: $BG;
+    --color-base-05: $(blend_hex "$BG" "$FG" 3);
+    --color-base-10: $(blend_hex "$BG" "$FG" 5);
+    --color-base-20: $OBS_SIDEBAR;
+    --color-base-25: $(blend_hex "$BG" "$FG" 11);
+    --color-base-30: $(blend_hex "$BG" "$FG" 15);
+    --color-base-35: $(blend_hex "$BG" "$FG" 20);
+    --color-base-40: $(blend_hex "$BG" "$FG" 28);
+    --color-base-50: $FG_MUTED;
+    --color-base-60: $(blend_hex "$BG" "$FG" 62);
+    --color-base-70: $(blend_hex "$BG" "$FG" 75);
+    --color-base-100: $FG;
+
+    --background-primary: $BG;
+    --background-primary-alt: $BG_ALT;
+    --background-secondary: $OBS_SIDEBAR;
+    --background-secondary-alt: $BG_ALT;
+    --background-modifier-border: $(blend_hex "$BG" "$FG" 15);
+    --background-modifier-hover: rgba($(hex_rgb "$FG"), 0.06);
+    --background-modifier-active-hover: rgba($(hex_rgb "$ACCENT"), 0.15);
+    --text-normal: $FG;
+    --text-muted: $(blend_hex "$BG" "$FG" 75);
+    --text-faint: $FG_MUTED;
+    --text-on-accent: $BG;
+    --text-selection: rgba($(hex_rgb "$BG_VISUAL"), 0.85);
+    --text-highlight-bg: rgba($(hex_rgb "$ACCENT"), 0.30);
+
+    /* Accent */
+    --accent-h: $ACC_H;
+    --accent-s: $ACC_S;
+    --accent-l: $ACC_L;
+    --color-accent: $ACCENT;
+    --color-accent-1: $ACCENT_SOFT;
+    --color-accent-2: $ACCENT_SOFT;
+    --interactive-accent: $ACCENT;
+    --interactive-accent-hover: $ACCENT_SOFT;
+    --text-accent: $ACCENT;
+    --text-accent-hover: $ACCENT_SOFT;
+    --link-color: $ACCENT_SOFT;
+    --link-color-hover: $ACCENT;
+    --link-external-color: $ACCENT_SOFT;
+    --link-unresolved-color: $FG_MUTED;
+
+    /* Headings */
+    --h1-color: $ACCENT;
+    --h2-color: $ACCENT_SOFT;
+    --h3-color: $ACCENT_SOFT;
+    --h4-color: $FG;
+    --h5-color: $FG;
+    --h6-color: $FG_MUTED;
+
+    /* Named colors (callouts, tags, graph, syntax highlighting) */
+    --color-red: $ANSI_RED;       --color-red-rgb: $(hex_rgb "$ANSI_RED");
+    --color-orange: $OBS_ORANGE;  --color-orange-rgb: $(hex_rgb "$OBS_ORANGE");
+    --color-yellow: $ANSI_YELLOW; --color-yellow-rgb: $(hex_rgb "$ANSI_YELLOW");
+    --color-green: $ANSI_GREEN;   --color-green-rgb: $(hex_rgb "$ANSI_GREEN");
+    --color-cyan: $ANSI_CYAN;     --color-cyan-rgb: $(hex_rgb "$ANSI_CYAN");
+    --color-blue: $OBS_BLUE;      --color-blue-rgb: $(hex_rgb "$OBS_BLUE");
+    --color-purple: $OBS_PURPLE;  --color-purple-rgb: $(hex_rgb "$OBS_PURPLE");
+    --color-pink: $ACCENT_SOFT;   --color-pink-rgb: $(hex_rgb "$ACCENT_SOFT");
+
+    /* Fonts from the desktop font picker (\$mod+Shift+f); !important beats the synced font settings */
+    --font-interface-override: "$FONT_UI", sans-serif !important;
+    --font-text-override: "$FONT_UI", sans-serif !important;
+    --font-monospace-override: "$FONT_MONO", monospace !important;
+}
+EOF
 
 # ==========================================
 # 8.5 Spotify via Spicetify (~/.config/spicetify/Themes/ColorEngine)

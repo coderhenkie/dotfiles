@@ -234,7 +234,7 @@ if grep -qsE '^[[:space:]]*(auto|allow-hotplug|iface)[[:space:]]+wl' /etc/networ
     echo "    To hand it to NetworkManager: comment out the wl* lines there and reboot (do this locally, not over SSH)."
 fi
 
-# No nm-applet tray icon: polybar's wifi module (click: nmtui) replaces it. network-manager-gnome
+# No nm-applet tray icon: polybar's wifi module (click: menu-wifi.sh, right-click: nmtui) replaces it. network-manager-gnome
 # ships an XDG autostart entry that dex would start at login, so hide it for this user.
 mkdir -p "$HOME/.config/autostart"
 printf '[Desktop Entry]\nType=Application\nName=nm-applet (disabled: replaced by polybar wifi module)\nHidden=true\n' \
@@ -312,7 +312,6 @@ if [ ! -f "$APPIMAGE_DIR/obsidian.appimage" ]; then
     echo " -> Fetching latest Obsidian release (checksum-verified)..."
     if gh_install_latest "obsidianmd/obsidian-releases" '^Obsidian-[0-9.]+\.AppImage$' "$APPIMAGE_DIR/obsidian.appimage"; then
         chmod u+x "$APPIMAGE_DIR/obsidian.appimage"
-        ln -sf "$APPIMAGE_DIR/obsidian.appimage" "$LOCAL_BIN/obsidian"
         echo "[OK] Obsidian installed."
     else
         echo "[!] Obsidian could not be installed (continuing setup)."
@@ -320,6 +319,10 @@ if [ ! -f "$APPIMAGE_DIR/obsidian.appimage" ]; then
 else
     echo "[OK] Obsidian is already installed."
 fi
+# `obsidian` in a terminal = today's daily note in Neovim; `obsidian-app` (and Rofi) = the app.
+# Sync while the app is closed: Obsidian Headless (scripts/obsidian-sync.sh daemon, started by i3)
+ln -sf "$DOTFILES_DIR/scripts/obsidian-tui.sh" "$LOCAL_BIN/obsidian"
+ln -sf "$DOTFILES_DIR/scripts/obsidian-app.sh" "$LOCAL_BIN/obsidian-app"
 
 # Create the .desktop entry for Rofi. No --no-sandbox: Debian 13 allows unprivileged user
 # namespaces, so Electron's sandbox works inside the AppImage.
@@ -327,14 +330,27 @@ mkdir -p "$HOME/.local/share/applications"
 cat <<EOF > "$HOME/.local/share/applications/obsidian.desktop"
 [Desktop Entry]
 Name=Obsidian
-Exec=$HOME/.local/bin/obsidian %U
+Exec=$HOME/.local/bin/obsidian-app %U
 Terminal=false
 Type=Application
 Icon=obsidian
-StartupWMClass=obsidian
+StartupWMClass=md.obsidian.Obsidian
 Comment=Obsidian Markdown Note-taking
 Categories=Office;
+MimeType=x-scheme-handler/obsidian;
 EOF
+
+# Icons from the AppImage itself (Icon=obsidian), so the launcher doesn't depend on a .deb install
+if [ -f "$APPIMAGE_DIR/obsidian.appimage" ] && [ ! -f "$HOME/.local/share/icons/hicolor/256x256/apps/obsidian.png" ]; then
+    OBS_TMP=$(mktemp -d)
+    (cd "$OBS_TMP" && "$APPIMAGE_DIR/obsidian.appimage" --appimage-extract 'usr/share/icons/*' >/dev/null 2>&1)
+    mkdir -p "$HOME/.local/share/icons"
+    cp -r "$OBS_TMP/squashfs-root/usr/share/icons/hicolor" "$HOME/.local/share/icons/" 2>/dev/null
+    rm -rf "$OBS_TMP"
+fi
+# obsidian:// links (Sync login, "Open in Obsidian") go to the AppImage
+update-desktop-database "$HOME/.local/share/applications" 2>/dev/null
+xdg-mime default obsidian.desktop x-scheme-handler/obsidian
 
 # --- THORIUM BROWSER (NEWEST VERIFIED AVX2 / SSE4 APPIMAGE + EXTENSIONS + GTK THEME) ---
 # update-thorium.sh installs or updates to the newest checksum-verified build (also runs at i3 login)
@@ -478,6 +494,19 @@ mkdir -p "$HOME/.config/spotify"
 # fd-find: fast find   bat: cat with syntax highlighting   zoxide: jump to frequent folders (z)
 echo " -> Installing Starship prompt and CLI tools (fzf, ripgrep, fd, bat, zoxide)..."
 sudo nala install -y starship fzf ripgrep fd-find bat zoxide
+# LazyVim (nvim/): build-essential compiles Treesitter parsers, lazygit is the git UI behind <space>gg
+sudo nala install -y build-essential lazygit
+
+# Node.js LTS in ~/.local/opt/node (Debian's Node 20 is too old for Obsidian Headless; Mason uses it too)
+bash "$DOTFILES_DIR/scripts/install-node.sh" || echo "[!] Node.js could not be installed (continuing setup)."
+# Obsidian Headless (`ob`): Sync without the app, run by scripts/obsidian-sync.sh. Link a vault once
+# with `obsidian-sync.sh setup` (login is interactive, so setup.sh doesn't do it).
+if [ -x "$LOCAL_BIN/npm" ]; then
+    "$LOCAL_BIN/npm" install -g --prefix "$HOME/.local" obsidian-headless >/dev/null 2>&1 \
+        && echo "[OK] Obsidian Headless installed/updated." \
+        || echo "[!] Obsidian Headless could not be installed (continuing setup)."
+fi
+ln -sf "$DOTFILES_DIR/scripts/obsidian-sync.sh" "$LOCAL_BIN/obsidian-sync"
 # Debian ships fd and bat as fdfind and batcat (name clashes with other packages)
 ln -sf /usr/bin/fdfind "$LOCAL_BIN/fd"
 ln -sf /usr/bin/batcat "$LOCAL_BIN/bat"
@@ -755,4 +784,10 @@ bash "$DOTFILES_DIR/scripts/ui-scale.sh" files
 bash "$DOTFILES_DIR/scripts/apply-theme.sh" "$BG" "$FG" "$ACCENT"
 
 echo "[OK] Bootstrap theme generated and applied."
+
+# LazyVim: install the plugins pinned in nvim/lazy-lock.json (Mason tools follow on first start)
+echo "==> Installing Neovim plugins (LazyVim)..."
+"$LOCAL_BIN/nvim" --headless "+Lazy! restore" +qa >/dev/null 2>&1 \
+    && echo "[OK] Neovim plugins installed." \
+    || echo "[!] Neovim plugins could not be installed now; they install on the first start of nvim."
 echo "[OK] Setup completed!"

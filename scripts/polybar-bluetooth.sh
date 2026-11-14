@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Polybar Bluetooth status (replaces the blueman tray icon).
 #   no args : print status — "%{F<muted>}󰂲%{F-}" when off, "󰂯" when on, "󰂱 <device>" when connected
-#   toggle  : power the adapter on/off
+#   toggle  : power the adapter on/off (right-click; left-click opens scripts/menu-bluetooth.sh)
 # Prints nothing when the machine has no Bluetooth controller, so the module hides itself.
 
 muted=$(awk -F' *= *' '/^muted/ { print $2; exit }' ~/.cache/theme/polybar.ini 2>/dev/null)
