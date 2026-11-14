@@ -917,12 +917,38 @@ body, button, input, textarea, h1, h2, h3, h4, h5, h6, p, span, div, a {
 }
 EOF
 
+    # A backup made before Spotify's first launch (fresh install via setup.sh) records an empty
+    # Spotify version, because spicetify reads it from the prefs file Spotify writes on launch.
+    # Every later refresh then fails with "Spotify version and backup version are mismatched".
+    # Fill in the version, but only while Spotify is still the patched install from that backup
+    # (an apt update restores Apps/xpui.spa; that case is handled by "restore backup apply" below).
+    SPICE_CFG=$("$SPICETIFY_BIN" -c 2>/dev/null)
+    SPOTIFY_VER=$(grep -o 'app.last-launched-version="[^"]*"' "$HOME/.config/spotify/prefs" 2>/dev/null | cut -d'"' -f2)
+    if [ -f "$SPICE_CFG" ] && [ -n "$SPOTIFY_VER" ] && grep -q '^version *= *$' "$SPICE_CFG" \
+        && [ -f "$HOME/.local/state/spicetify/Backup/xpui.spa" ] && [ ! -e /usr/share/spotify/Apps/xpui.spa ]; then
+        sed -i "s/^version *= *\$/version = $SPOTIFY_VER/" "$SPICE_CFG"
+    fi
+
     {
         "$SPICETIFY_BIN" -q -n config current_theme ColorEngine color_scheme base inject_css 1 replace_colors 1 \
             && { "$SPICETIFY_BIN" -q -n refresh \
                  || "$SPICETIFY_BIN" -q -n backup apply \
                  || "$SPICETIFY_BIN" -q -n restore backup apply; }
-    } </dev/null >/dev/null 2>&1 || echo "[!] Spicetify could not apply the theme to Spotify (run 'spicetify backup apply' manually)." >&2
+    } </dev/null >/dev/null 2>&1 \
+        && SPICE_APPLIED=1 \
+        || echo "[!] Spicetify could not apply the theme to Spotify (run 'spicetify backup apply' manually)." >&2
+
+    # Spotify only loads the theme at startup: restart it if it's running, unless it's playing
+    # (don't cut off music mid-song; the theme then shows up on the next launch)
+    if [ "${SPICE_APPLIED:-0}" = 1 ] && pgrep -x spotify >/dev/null; then
+        if [ "$(playerctl -p spotify status 2>/dev/null)" = "Playing" ]; then
+            echo "[i] Spotify is playing: new theme applies the next time Spotify starts."
+        else
+            pkill -x spotify
+            for _ in $(seq 50); do pgrep -x spotify >/dev/null || break; sleep 0.1; done
+            setsid spotify >/dev/null 2>&1 </dev/null &
+        fi
+    fi
 fi
 
 # ==========================================

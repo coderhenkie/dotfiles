@@ -151,7 +151,7 @@ sudo nala install -y i3 kitty polybar feh rofi wget unzip fontconfig libfuse2 fu
 # 3.5 Desktop Essentials
 # ==========================================
 echo "==> Installing desktop essentials (network, polkit, viewers, archives, Rofi tools, displays, backups)..."
-# network-manager(-gnome): Wi-Fi/VPN + nm-applet tray icon   mate-polkit: GUI password prompts (pkexec)
+# network-manager(-gnome): Wi-Fi/VPN (nmtui + nm-connection-editor)  mate-polkit: GUI password prompts (pkexec)
 # zathura/imv/mpv: PDF, image & media viewers               thunar-archive-plugin/xarchiver: "Extract here"
 # gvfs-backends: phones (MTP), SMB/SFTP shares in Thunar     qalc/xdotool/unicode-data/noto emoji: Rofi tools
 # autorandr/arandr: monitor profiles & layout GUI            timeshift: system snapshots
@@ -198,8 +198,21 @@ for usb_if in /sys/bus/usb/devices/*:*; do
     [ "$(cat "$usb_if/bInterfaceClass" 2>/dev/null)$(cat "$usb_if/bInterfaceSubClass" 2>/dev/null)$(cat "$usb_if/bInterfaceProtocol" 2>/dev/null)" = "e00101" ] && HAS_BLUETOOTH=1
 done
 if [ "$HAS_BLUETOOTH" = 1 ]; then
-    echo "==> Bluetooth controller detected: installing BlueZ + Blueman (tray applet starts at login)..."
-    sudo nala install -y bluez blueman
+    echo "==> Bluetooth controller detected: installing BlueZ + Blueman (pairing agent, no tray icon) + PipeWire Bluetooth audio..."
+    # libspa-0.2-bluetooth: PipeWire A2DP/HFP profiles; without it headphones fail with br-connection-profile-unavailable
+    sudo nala install -y bluez blueman libspa-0.2-bluetooth
+    # Keep blueman-applet (pairing agent) but drop its tray icon: polybar's bluetooth module replaces it
+    python3 -c "from gi.repository import Gio; s = Gio.Settings.new('org.blueman.general'); s.set_strv('plugin-list', ['!StatusIcon', '!ShowConnected']); Gio.Settings.sync()" \
+        || echo "[!] Could not hide the Blueman tray icon."
+    # USB autosuspend makes many Bluetooth adapters (notably Realtek Wi-Fi/BT combo chips) drop out
+    # briefly, which is heard as audio stutter on headphones; the power saving is negligible
+    echo 'options btusb enable_autosuspend=0' | sudo tee /etc/modprobe.d/btusb-no-autosuspend.conf >/dev/null
+    # Realtek rtw88 Wi-Fi/BT combo chips (e.g. RTL8821CE): Wi-Fi deep power save (LPS deep) and PCIe ASPM
+    # also stall the Bluetooth side of the chip, heard as micro-stutter on headphones (even on 5 GHz)
+    if lsmod | grep -q '^rtw88_core'; then
+        printf 'options rtw88_core disable_lps_deep=1\noptions rtw88_pci disable_aspm=1\n' \
+            | sudo tee /etc/modprobe.d/rtw88-bt-coex.conf >/dev/null
+    fi
     sudo systemctl enable --now bluetooth
 else
     echo "[OK] No Bluetooth controller detected: skipping Bluetooth."
@@ -215,11 +228,17 @@ fi
 
 # NetworkManager leaves interfaces listed in /etc/network/interfaces to ifupdown, so a wired/SSH
 # connection configured by the Debian installer keeps working. Wi-Fi configured there is NOT
-# managed by nm-applet; it is never changed automatically because that could cut the connection.
+# managed by NetworkManager; it is never changed automatically because that could cut the connection.
 if grep -qsE '^[[:space:]]*(auto|allow-hotplug|iface)[[:space:]]+wl' /etc/network/interfaces /etc/network/interfaces.d/*; then
-    echo "[!] Wi-Fi is configured in /etc/network/interfaces, so nm-applet cannot manage it."
+    echo "[!] Wi-Fi is configured in /etc/network/interfaces, so NetworkManager cannot manage it."
     echo "    To hand it to NetworkManager: comment out the wl* lines there and reboot (do this locally, not over SSH)."
 fi
+
+# No nm-applet tray icon: polybar's wifi module (click: nmtui) replaces it. network-manager-gnome
+# ships an XDG autostart entry that dex would start at login, so hide it for this user.
+mkdir -p "$HOME/.config/autostart"
+printf '[Desktop Entry]\nType=Application\nName=nm-applet (disabled: replaced by polybar wifi module)\nHidden=true\n' \
+    > "$HOME/.config/autostart/nm-applet.desktop"
 
 echo "==> Enabling automatic security updates (unattended-upgrades)..."
 sudo nala install -y unattended-upgrades
@@ -491,8 +510,8 @@ rm -rf "$HOME/.local/share/fonts/JetBrainsMono"
 sudo rm -rf /usr/local/share/fonts/JetBrainsMono /usr/local/share/fonts/Iosevka
 fc-cache -f >/dev/null 2>&1
 
-# Install the default font and the active one (if another font was picked on this machine)
-for font_id in "$FONTS_DEFAULT" "$(font_active)"; do
+# Install every font module, so the picker ($mod+Shift+f) switches instantly without downloading
+for font_id in $(font_ids); do
     if font_is_installed "$font_id"; then
         echo "[OK] $FONT_NAME Nerd Font is installed."
     else

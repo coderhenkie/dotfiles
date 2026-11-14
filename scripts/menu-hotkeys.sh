@@ -133,8 +133,8 @@ describe_action() {
         *"resize grow height"*)              echo "${prefix}Grow height" ;;
         *"resize shrink height"*)            echo "${prefix}Shrink height" ;;
         *"resize grow width"*)               echo "${prefix}Grow width" ;;
-        *"set-sink-volume"*+*) echo "${prefix}Volume up" ;;
-        *"set-sink-volume"*-*) echo "${prefix}Volume down" ;;
+        *"set-sink-volume"*+*|*"volume.sh up"*)   echo "${prefix}Volume up" ;;
+        *"set-sink-volume"*-*|*"volume.sh down"*) echo "${prefix}Volume down" ;;
         *"set-sink-mute"*)                   echo "${prefix}Mute audio" ;;
         *"set-source-mute"*)                 echo "${prefix}Mute mic" ;;
         *)

@@ -38,9 +38,9 @@ bindsym $mod+Shift+KP_Add exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh up
 bindsym $mod+Shift+KP_Subtract exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh down
 bindsym $mod+Shift+BackSpace exec --no-startup-id ~/dotfiles/scripts/ui-scale.sh reset
 
-# Volume controls (managed via PulseAudio / PipeWire; Polybar handles status display)
-bindsym XF86AudioRaiseVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ +5%
-bindsym XF86AudioLowerVolume exec --no-startup-id pactl set-sink-volume @DEFAULT_SINK@ -5%
+# Volume controls: 5% steps snapped to multiples of 5 (scripts/volume.sh); Polybar handles status display
+bindsym XF86AudioRaiseVolume exec --no-startup-id ~/dotfiles/scripts/volume.sh up
+bindsym XF86AudioLowerVolume exec --no-startup-id ~/dotfiles/scripts/volume.sh down
 bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle
 bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOURCE@ toggle
 
