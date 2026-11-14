@@ -682,6 +682,27 @@ bash "$DOTFILES_DIR/scripts/default-apps.sh"
 echo "==> Configuring LightDM GTK Greeter and light-locker for Color Engine..."
 bash "$DOTFILES_DIR/scripts/lockscreen-setup.sh"
 
+# Auto-suspend after 30 min locked (scripts/lock-suspend.sh). A locked session is inactive for
+# logind, which then asks for an admin password to suspend; this rule lets only this user suspend
+# from a local session without one. Bare metal only: VMs never auto-suspend.
+# shellcheck source=scripts/lib/machine.sh
+source "$DOTFILES_DIR/scripts/lib/machine.sh"
+if machine_is_vm; then
+    echo "[OK] $(machine_type) detected: skipping auto-suspend polkit rule."
+else
+    echo "==> Bare metal detected: allowing suspend while locked (polkit rule)..."
+    sudo tee /etc/polkit-1/rules.d/50-lock-suspend.rules >/dev/null <<POLKIT
+// Managed by ~/dotfiles/setup.sh: lets $USER suspend while the screen is locked (lock-suspend.sh)
+polkit.addRule(function(action, subject) {
+    if ((action.id == "org.freedesktop.login1.suspend" ||
+         action.id == "org.freedesktop.login1.suspend-multiple-sessions") &&
+        subject.user == "$USER" && subject.local) {
+        return polkit.Result.YES;
+    }
+});
+POLKIT
+fi
+
 # ==========================================
 # 9. Color Engine Bootstrap & Live Reload (Including LightDM, Thorium, Neovim, Herdr, btop & Spotify)
 # ==========================================

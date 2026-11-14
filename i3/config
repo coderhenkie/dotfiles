@@ -28,8 +28,11 @@ exec --no-startup-id dex --autostart --environment i3
 # Ensure light-locker daemon is running for session and idle locking
 exec_always --no-startup-id sh -c 'pgrep -x light-locker >/dev/null || light-locker --lock-after-screensaver=5 --no-late-locking --lock-on-suspend &'
 
-# Enable automatic idle lock after 5 minutes (300s) while keeping DPMS monitor power-off disabled in the VM
-exec_always --no-startup-id xset s 300 5 -dpms
+# Enable automatic idle lock after 3 minutes (175s screensaver + 5s light-locker grace) while keeping DPMS monitor power-off disabled in the VM
+exec_always --no-startup-id xset s 175 5 -dpms
+
+# Suspend after 30 minutes locked (bare metal only; exits immediately in a VM)
+exec --no-startup-id ~/dotfiles/scripts/lock-suspend.sh
 
 # NetworkManager: no tray applet; Wi-Fi status/menu is the polybar wifi module (nmtui on click)
 
