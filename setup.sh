@@ -362,7 +362,7 @@ cat <<EOF > "$HOME/.local/share/applications/thorium.desktop"
 [Desktop Entry]
 Name=Thorium Browser
 GenericName=Web Browser
-Exec=$HOME/.local/bin/thorium --no-default-browser-check %U
+Exec=$HOME/dotfiles/scripts/thorium-launch.sh --no-default-browser-check %U
 Terminal=false
 Type=Application
 Icon=thorium
@@ -376,24 +376,20 @@ EOF
 # 2. Bitwarden Password Manager  (nngceckbapebfimnlniiiahkandclblb)
 # 3. Ghostery Tracker/Ad Blocker (mlomiejdfkolichcflejclcbmpeaniij)
 # 4. Vimium Keyboard Navigation  (dbepggeogbaibhgnhhndojpepiihcmeb)
+# 5. Dark Reader                 (eimadpbcbfnmbkopoojfekhnkhdbieeh)
 THORIUM_EXT_IDS=(
     "dahfohiipmpcppjbablgfoggbogdmddp"
     "nngceckbapebfimnlniiiahkandclblb"
     "mlomiejdfkolichcflejclcbmpeaniij"
     "dbepggeogbaibhgnhhndojpepiihcmeb"
+    "eimadpbcbfnmbkopoojfekhnkhdbieeh"
 )
 
+# Force-install policy, built from the list above (one place to add an extension)
 sudo mkdir -p /etc/chromium/policies/managed /etc/opt/chrome/policies/managed
-sudo tee /etc/chromium/policies/managed/thorium_extensions.json /etc/opt/chrome/policies/managed/thorium_extensions.json >/dev/null <<EOF
-{
-  "ExtensionInstallForcelist": [
-    "dahfohiipmpcppjbablgfoggbogdmddp;https://clients2.google.com/service/update2/crx",
-    "nngceckbapebfimnlniiiahkandclblb;https://clients2.google.com/service/update2/crx",
-    "mlomiejdfkolichcflejclcbmpeaniij;https://clients2.google.com/service/update2/crx",
-    "dbepggeogbaibhgnhhndojpepiihcmeb;https://clients2.google.com/service/update2/crx"
-  ]
-}
-EOF
+printf '%s\n' "${THORIUM_EXT_IDS[@]}" \
+    | jq -R '. + ";https://clients2.google.com/service/update2/crx"' | jq -s '{ExtensionInstallForcelist: .}' \
+    | sudo tee /etc/chromium/policies/managed/thorium_extensions.json /etc/opt/chrome/policies/managed/thorium_extensions.json >/dev/null
 
 mkdir -p "$HOME/.config/thorium/External Extensions"
 for ext_id in "${THORIUM_EXT_IDS[@]}"; do
@@ -507,6 +503,11 @@ if [ -x "$LOCAL_BIN/npm" ]; then
         || echo "[!] Obsidian Headless could not be installed (continuing setup)."
 fi
 ln -sf "$DOTFILES_DIR/scripts/obsidian-sync.sh" "$LOCAL_BIN/obsidian-sync"
+# LevelDB binding for scripts/darkreader-theme.js (Dark Reader in Thorium follows the Color Engine)
+if [ -x "$LOCAL_BIN/npm" ]; then
+    "$LOCAL_BIN/npm" install --prefix "$HOME/.local/lib/dotfiles-node" classic-level >/dev/null 2>&1 \
+        || echo "[!] classic-level could not be installed (Dark Reader colors won't follow the theme)."
+fi
 # Debian ships fd and bat as fdfind and batcat (name clashes with other packages)
 ln -sf /usr/bin/fdfind "$LOCAL_BIN/fd"
 ln -sf /usr/bin/batcat "$LOCAL_BIN/bat"
