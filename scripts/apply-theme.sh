@@ -1118,17 +1118,21 @@ EOF
         && SPICE_APPLIED=1 \
         || echo "[!] Spicetify could not apply the theme to Spotify (run 'spicetify backup apply' manually)." >&2
 
-    # Spotify only loads the theme at startup: restart it if it's running, unless it's playing
-    # (don't cut off music mid-song; the theme then shows up on the next launch)
+    # Spotify only loads the theme at startup: restart it if it's running. When it was playing, the
+    # same track continues at the same position (scripts/spotify-restart.sh, in the background so
+    # the theme switch doesn't wait for it)
     if [ "${SPICE_APPLIED:-0}" = 1 ] && pgrep -x spotify >/dev/null; then
-        if [ "$(playerctl -p spotify status 2>/dev/null)" = "Playing" ]; then
-            echo "[i] Spotify is playing: new theme applies the next time Spotify starts."
-        else
-            pkill -x spotify
-            for _ in $(seq 50); do pgrep -x spotify >/dev/null || break; sleep 0.1; done
-            setsid spotify >/dev/null 2>&1 </dev/null &
-        fi
+        setsid "$HOME/dotfiles/scripts/spotify-restart.sh" >/dev/null 2>&1 </dev/null &
     fi
+fi
+
+# ==========================================
+# 8.7 Dark Reader in Thorium (scripts/darkreader-theme.js)
+# ==========================================
+# Website dark mode in the theme's colors. Its storage is locked while Thorium runs; then the colors
+# are applied at Thorium's next start (scripts/thorium-launch.sh).
+if command -v node >/dev/null 2>&1; then
+    node "$HOME/dotfiles/scripts/darkreader-theme.js" apply >/dev/null 2>&1 || true
 fi
 
 # ==========================================
