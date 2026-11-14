@@ -656,6 +656,12 @@ if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/menu-power.sh" 
     echo "[OK] Power menu bound to \$mod+Shift+e in existing i3/hotkeys.conf."
 fi
 
+# Migrate existing hotkeys.conf files: add the monitor menu (mirror / extend) once
+if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/menu-monitors.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
+    sed -i '/scripts\/lock\.sh/a bindsym $mod+p exec --no-startup-id ~/dotfiles/scripts/menu-monitors.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Added monitor menu hotkey (\$mod+p) to existing i3/hotkeys.conf."
+fi
+
 # Migrate existing hotkeys.conf files: add the Rofi tools (clipboard, calculator, emoji) once
 if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/menu-clipboard.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
     sed -i '/scripts\/lock\.sh/a bindsym $mod+c exec --no-startup-id ~/dotfiles/scripts/menu-clipboard.sh menu\nbindsym $mod+equal exec --no-startup-id ~/dotfiles/scripts/menu-calc.sh\nbindsym $mod+Shift+period exec --no-startup-id ~/dotfiles/scripts/menu-emoji.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
@@ -676,6 +682,15 @@ chmod +x "$DOTFILES_DIR/scripts/"*.sh
 # autorandr hotplug: udev triggers this service on every plug/unplug (HDMI, dock, lid).
 # Without saved profiles it falls back to autorandr/default -> common (mirror all screens).
 sudo systemctl enable autorandr.service >/dev/null 2>&1 || echo "[!] autorandr.service could not be enabled (continuing setup)."
+
+# Multiple screens: ask which one is left / (middle) / right and save it as autorandr profile `main`
+# (scripts/monitor-layout.sh, re-run it any time). Needs the X session, so it is skipped from a TTY.
+if [ -n "${DISPLAY:-}" ] && command -v xrandr >/dev/null 2>&1; then
+    echo "==> Detecting screens..."
+    bash "$DOTFILES_DIR/scripts/monitor-layout.sh" || echo "[!] Monitor layout skipped (continuing setup)."
+else
+    echo "[!] No X session: arrange multiple screens later with ~/dotfiles/scripts/monitor-layout.sh"
+fi
 ln -sf "$DOTFILES_DIR/scripts/lock.sh" "$LOCAL_BIN/lock"
 
 echo "==> Adding the dotfiles tools to Rofi (font picker, themes, clipboard, ...)..."

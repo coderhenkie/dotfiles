@@ -17,6 +17,7 @@ bindsym $mod+Shift+w exec --no-startup-id ~/dotfiles/scripts/menu-theme.sh
 bindsym $mod+t exec --no-startup-id ~/dotfiles/scripts/menu-wallpaper.sh
 bindsym $mod+m exec --no-startup-id ~/dotfiles/scripts/menu-hotkeys.sh
 bindsym $mod+Shift+x exec --no-startup-id ~/dotfiles/scripts/lock.sh
+bindsym $mod+p exec --no-startup-id ~/dotfiles/scripts/menu-monitors.sh
 
 # Notifications: toggle silent mode / open notification menu
 bindsym $mod+n exec --no-startup-id ~/dotfiles/scripts/menu-notifications.sh toggle

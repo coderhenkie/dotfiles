@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # autorandr hook: runs after every monitor layout switch (plug/unplug, lid, `autorandr --change`).
-# Re-launches Polybar and re-applies the wallpaper so both fit the new layout.
+# Re-launches Polybar, re-assigns the workspaces and re-applies the wallpaper so both fit the new layout.
 ~/.config/polybar/launch.sh >/dev/null 2>&1 &
+# 2 screens: workspaces 1-4 on the left screen, 5-10 on the right one
+~/dotfiles/scripts/workspaces.sh >/dev/null 2>&1 &
 [ -x ~/.fehbg ] && ~/.fehbg >/dev/null 2>&1 &
 command -v notify-send >/dev/null && notify-send -a "Display" -u low "Display layout: ${AUTORANDR_CURRENT_PROFILE:-changed}" &

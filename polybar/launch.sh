@@ -14,6 +14,17 @@ killall -q polybar
 # Wait until the processes have completely shut down
 while pgrep -u $UID -x polybar >/dev/null; do sleep 0.2; done
 
-# Launch both Top and Bottom Polybar bars
-setsid polybar top -c ~/.config/polybar/config.ini >/dev/null 2>&1 < /dev/null 9>&- &
-setsid polybar bottom -c ~/.config/polybar/config.ini >/dev/null 2>&1 < /dev/null 9>&- &
+# Launch a Top and Bottom bar on every screen (scripts/monitor-layout.sh arranges them).
+# The tray can only exist once, so only the primary screen's top bar gets it.
+PRIMARY=$(polybar --list-monitors 2>/dev/null | awk -F: '/\(primary\)/ {print $1; exit}')
+MONITORS=$(polybar --list-monitors 2>/dev/null | cut -d: -f1)
+[ -z "$MONITORS" ] && MONITORS="-"   # fallback: let Polybar pick
+[ -z "$PRIMARY" ] && PRIMARY=$(head -n1 <<< "$MONITORS")
+
+for m in $MONITORS; do
+    tray=""
+    [ "$m" = "$PRIMARY" ] && tray="tray"
+    [ "$m" = "-" ] && m=""
+    MONITOR=$m TRAY_MODULE=$tray setsid polybar top -c ~/.config/polybar/config.ini >/dev/null 2>&1 < /dev/null 9>&- &
+    MONITOR=$m setsid polybar bottom -c ~/.config/polybar/config.ini >/dev/null 2>&1 < /dev/null 9>&- &
+done
