@@ -239,6 +239,16 @@ fi
 mkdir -p "$HOME/.config/autostart"
 printf '[Desktop Entry]\nType=Application\nName=nm-applet (disabled: replaced by polybar wifi module)\nHidden=true\n' \
     > "$HOME/.config/autostart/nm-applet.desktop"
+# One polkit agent only: i3 starts mate-polkit; lxpolkit (pulled in by pcmanfm) also autostarts via dex, and the
+# second agent fails with "An authentication agent already exists for the given subject"
+printf '[Desktop Entry]\nType=Application\nName=LXPolKit (disabled: mate-polkit is the agent)\nHidden=true\n' \
+    > "$HOME/.config/autostart/lxpolkit.desktop"
+
+# ~/.local/bin (node, ob, obsidian, ...) on PATH for the whole desktop session: LightDM's X session reads
+# ~/.xsessionrc, not ~/.profile, so without this i3, rofi and their scripts can't find them
+if ! grep -qs 'HOME/.local/bin' "$HOME/.xsessionrc"; then
+    printf '# Added by ~/dotfiles/setup.sh: user binaries (node, ob, ...) for i3 and everything it starts\ncase ":$PATH:" in *":$HOME/.local/bin:"*) ;; *) export PATH="$HOME/.local/bin:$PATH" ;; esac\n' >> "$HOME/.xsessionrc"
+fi
 
 echo "==> Enabling automatic security updates (unattended-upgrades)..."
 sudo nala install -y unattended-upgrades

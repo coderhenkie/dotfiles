@@ -18,6 +18,7 @@
 # stored in ~/.config/obsidian-sync/vault.
 
 OB="$HOME/.local/bin/ob"
+export PATH="$HOME/.local/bin:$PATH"   # ob runs via `env node` (install-node.sh); i3 may start us without it
 APPIMAGE="$HOME/appimages/obsidian.appimage"
 CONF_DIR="$HOME/.config/obsidian-sync"
 VAULT_FILE="$CONF_DIR/vault"
