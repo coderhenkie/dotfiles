@@ -1,0 +1,92 @@
+# ==========================================
+# Starship Prompt: minimal
+# ==========================================
+# Layout only, no hardcoded colors. scripts/apply-theme.sh appends [palettes.color_engine]
+# (written to ~/.cache/theme/starship-palette.toml) and merges both into
+# ~/.cache/theme/starship.toml, which is the file Starship reads (STARSHIP_CONFIG, set in
+# starship/init.bash). Starship re-reads its config on every prompt, so a theme switch
+# recolors every open terminal at the next Enter.
+#
+#   ~/dotfiles/scripts  main !2 ?1  4s              (local)
+#   󰌘 wubbo@server ~/dotfiles  main                 (over SSH)
+#   ❯
+#
+# Folder in the accent, git and extras muted, ❯ turns red after a failed command.
+# Palette names: bg bg_alt bg_visual fg muted accent accent_soft accent_dim red green yellow cyan
+
+"$schema" = "https://starship.rs/config-schema.json"
+palette = "color_engine"
+add_newline = true
+command_timeout = 500
+
+format = """
+${env_var.SSH_CONNECTION}($username$hostname )$directory$git_branch$git_state$git_status$python$cmd_duration
+$character"""
+
+# Only shown as root or over SSH, in yellow with a network icon so a remote shell is
+# impossible to mistake for a local one (root is red):  󰌘 wubbo@server ~/folder
+[username]
+style_user = "bold yellow"
+style_root = "bold red"
+format = "[$user]($style)"
+
+[hostname]
+ssh_only = true
+style = "bold yellow"
+format = "[@$hostname]($style)"
+
+[directory]
+style = "bold accent"
+read_only = " \U000F033E"
+read_only_style = "muted"
+truncation_length = 4
+truncation_symbol = "…/"
+truncate_to_repo = false
+format = "[$path]($style)[$read_only]($read_only_style) "
+
+[git_branch]
+symbol = " "
+style = "muted"
+format = "[$symbol$branch]($style) "
+
+[git_state]
+style = "yellow"
+format = "[\\($state( $progress_current/$progress_total)\\)]($style) "
+
+[git_status]
+style = "accent_soft"
+format = "[($all_status$ahead_behind)]($style)"
+conflicted = "= "
+ahead = "⇡${count} "
+behind = "⇣${count} "
+diverged = "⇕ "
+untracked = "?${count} "
+stashed = "≡ "
+modified = "!${count} "
+staged = "+${count} "
+renamed = "»${count} "
+deleted = "✘${count} "
+
+# Only the active virtualenv, no version noise
+[python]
+style = "muted"
+format = "[(\\($virtualenv\\) )]($style)"
+
+# Commands over 2s show their duration; over 60s they also pop up a dunst notification
+[cmd_duration]
+min_time = 2000
+show_notifications = true
+min_time_to_notify = 60000
+style = "muted"
+format = "[$duration]($style)"
+
+[character]
+success_symbol = "[❯](accent)"
+error_symbol = "[❯](red)"
+
+# Network icon in front of user@host, only over SSH (SSH_CONNECTION is set by sshd)
+[env_var.SSH_CONNECTION]
+style = "bold yellow"
+format = "[\U000F0318 ]($style)"
+
+# [palettes.color_engine] is appended below by scripts/apply-theme.sh

@@ -1,0 +1,19 @@
+# ripgrep config (RIPGREP_CONFIG_PATH, set in cli/init.bash)
+# Color names are ANSI colors, which Kitty maps to the Color Engine:
+# magenta = ACCENT, blue = ACCENT_DIM, black = BG (see the palette in scripts/apply-theme.sh)
+
+--smart-case
+--hidden
+--glob=!.git/
+--max-columns=200
+--max-columns-preview
+
+--colors=path:none
+--colors=path:fg:magenta
+--colors=path:style:bold
+--colors=line:fg:blue
+--colors=column:fg:blue
+--colors=match:none
+--colors=match:fg:black
+--colors=match:bg:magenta
+--colors=match:style:bold

@@ -473,6 +473,16 @@ fi
 mkdir -p "$HOME/.config/spotify"
 [ -f "$HOME/.config/spotify/prefs" ] || touch "$HOME/.config/spotify/prefs"
 
+# --- Starship prompt + terminal CLI tools (Debian packages; colored by the Color Engine) ---
+# starship: prompt (starship/init.bash)   fzf: fuzzy finder   ripgrep: fast grep (rg)
+# fd-find: fast find   bat: cat with syntax highlighting   zoxide: jump to frequent folders (z)
+echo " -> Installing Starship prompt and CLI tools (fzf, ripgrep, fd, bat, zoxide)..."
+sudo nala install -y starship fzf ripgrep fd-find bat zoxide
+# Debian ships fd and bat as fdfind and batcat (name clashes with other packages)
+ln -sf /usr/bin/fdfind "$LOCAL_BIN/fd"
+ln -sf /usr/bin/batcat "$LOCAL_BIN/bat"
+echo "[OK] Starship and CLI tools installed."
+
 # --- Claude Code ---
 echo " -> Installing Claude Code..."
 curl -fsSL https://claude.ai/install.sh | bash
@@ -482,9 +492,32 @@ echo "[OK] Claude Code installed."
 # 4.8 PATH configuration for ~/.local/bin
 # ==========================================
 echo "==> Checking PATH for ~/.local/bin..."
-if ! grep -q "$HOME/.local/bin" "$HOME/.bashrc"; then
+# Look for the literal line written below (grepping the expanded $HOME never matched it,
+# so every run appended another copy)
+if ! grep -Fq 'export PATH="$HOME/.local/bin:$PATH"' "$HOME/.bashrc"; then
     echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
     echo "[OK] Added ~/.local/bin to ~/.bashrc"
+fi
+# Remove the extra copies that older runs of this script added (keeps the first one)
+PATH_LINE='export PATH="$HOME/.local/bin:$PATH"'
+if [ "$(grep -cFx "$PATH_LINE" "$HOME/.bashrc")" -gt 1 ]; then
+    BASHRC_TMP=$(mktemp)
+    awk -v line="$PATH_LINE" '$0 == line { if (seen++) next } 1' "$HOME/.bashrc" > "$BASHRC_TMP"
+    cat "$BASHRC_TMP" > "$HOME/.bashrc"
+    rm -f "$BASHRC_TMP"
+    echo "[OK] Removed duplicate ~/.local/bin PATH lines from ~/.bashrc"
+fi
+
+# CLI tools (fzf key bindings, zoxide, bat/ripgrep config): logic lives in cli/init.bash
+if ! grep -Fq 'dotfiles/cli/init.bash' "$HOME/.bashrc"; then
+    printf '\n# CLI tools: fzf, ripgrep, fd, bat, zoxide (added by ~/dotfiles/setup.sh)\n[ -f "$HOME/dotfiles/cli/init.bash" ] && . "$HOME/dotfiles/cli/init.bash"\n' >> "$HOME/.bashrc"
+    echo "[OK] Added the CLI tools to ~/.bashrc"
+fi
+
+# Starship prompt: one source line, the logic lives in the repo (starship/init.bash)
+if ! grep -Fq 'dotfiles/starship/init.bash' "$HOME/.bashrc"; then
+    printf '\n# Starship prompt, colored by the Color Engine (added by ~/dotfiles/setup.sh)\n[ -f "$HOME/dotfiles/starship/init.bash" ] && . "$HOME/dotfiles/starship/init.bash"\n' >> "$HOME/.bashrc"
+    echo "[OK] Added the Starship prompt to ~/.bashrc"
 fi
 
 # ==========================================
