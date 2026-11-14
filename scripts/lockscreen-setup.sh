@@ -44,9 +44,14 @@ position=50%,center 50%,center
 screensaver-timeout=0
 EOF
 
+# Lock/login screen: Caps Lock <-> Escape and the monitor layout from $mod+p (autorandr `main`).
+# Installed root-owned (LightDM runs it as root), so it is a copy: re-run this script after editing it.
+echo "==> Installing the greeter display setup (monitor layout, Caps/Escape)..."
+sed "s|@CONF@|$HOME/.config/autorandr/main/config|" "$DOTFILES_DIR/scripts/lightdm-display-setup.sh" \
+    | sudo install -o root -g root -m 755 /dev/stdin /usr/local/sbin/lightdm-display-setup
 sudo tee /etc/lightdm/lightdm.conf.d/50-color-engine.conf >/dev/null <<EOF
 [Seat:*]
-display-setup-script=/usr/bin/setxkbmap -option caps:swapescape
+display-setup-script=/usr/local/sbin/lightdm-display-setup
 EOF
 
 # Fonts used to live in per-font system dirs (root-owned); they now live in the user-owned
