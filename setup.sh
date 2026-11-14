@@ -391,6 +391,16 @@ printf '%s\n' "${THORIUM_EXT_IDS[@]}" \
     | jq -R '. + ";https://clients2.google.com/service/update2/crx"' | jq -s '{ExtensionInstallForcelist: .}' \
     | sudo tee /etc/chromium/policies/managed/thorium_extensions.json /etc/opt/chrome/policies/managed/thorium_extensions.json >/dev/null
 
+# Memory Saver: tabs you haven't used for a while are put to sleep and reload when you click them.
+# MemorySaverModeSavings: 0 moderate, 1 balanced, 2 maximum. Chromium only allows these as managed
+# (fixed) policies, so the toggle in thorium://settings/performance is locked; change it here.
+sudo tee /etc/chromium/policies/managed/thorium_performance.json /etc/opt/chrome/policies/managed/thorium_performance.json >/dev/null <<EOF
+{
+  "HighEfficiencyModeEnabled": true,
+  "MemorySaverModeSavings": 1
+}
+EOF
+
 mkdir -p "$HOME/.config/thorium/External Extensions"
 for ext_id in "${THORIUM_EXT_IDS[@]}"; do
     cat <<EOF > "$HOME/.config/thorium/External Extensions/${ext_id}.json"
