@@ -484,9 +484,17 @@ ln -sf /usr/bin/batcat "$LOCAL_BIN/bat"
 echo "[OK] Starship and CLI tools installed."
 
 # --- Claude Code ---
-echo " -> Installing Claude Code..."
-curl -fsSL https://claude.ai/install.sh | bash
-echo "[OK] Claude Code installed."
+# The installer always downloads the full ~200MB binary, even when it is already current.
+# Ask the release server for the latest version number first (tiny request) and skip if it matches.
+CLAUDE_LATEST=$(curl -fsSL --max-time 10 https://downloads.claude.ai/claude-code-releases/latest 2>/dev/null || true)
+CLAUDE_CURRENT=$("$LOCAL_BIN/claude" --version 2>/dev/null | awk '{print $1}' || true)
+if [ -n "$CLAUDE_CURRENT" ] && [ "$CLAUDE_CURRENT" = "$CLAUDE_LATEST" ]; then
+    echo "[OK] Claude Code $CLAUDE_CURRENT is already the latest version: skipping install."
+else
+    echo " -> Installing Claude Code${CLAUDE_LATEST:+ $CLAUDE_LATEST}${CLAUDE_CURRENT:+ (currently $CLAUDE_CURRENT)}..."
+    curl -fsSL https://claude.ai/install.sh | bash
+    echo "[OK] Claude Code installed."
+fi
 
 # ==========================================
 # 4.8 PATH configuration for ~/.local/bin
