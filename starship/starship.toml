@@ -72,11 +72,11 @@ deleted = "✘${count} "
 style = "muted"
 format = "[(\\($virtualenv\\) )]($style)"
 
-# Commands over 2s show their duration; over 60s they also pop up a dunst notification
+# Commands over 2s show their duration. The "command finished" notification (over 60s) comes from
+# starship/init.bash instead of starship, so closing nvim, ssh, htop, ... doesn't notify.
 [cmd_duration]
 min_time = 2000
-show_notifications = true
-min_time_to_notify = 60000
+show_notifications = false
 style = "muted"
 format = "[$duration]($style)"
 
