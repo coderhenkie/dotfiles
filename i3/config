@@ -31,8 +31,7 @@ exec_always --no-startup-id sh -c 'pgrep -x light-locker >/dev/null || light-loc
 # Enable automatic idle lock after 5 minutes (300s) while keeping DPMS monitor power-off disabled in the VM
 exec_always --no-startup-id xset s 300 5 -dpms
 
-# NetworkManager applet
-exec --no-startup-id nm-applet
+# NetworkManager: no tray applet; Wi-Fi status/menu is the polybar wifi module (nmtui on click)
 
 # Polkit agent: password prompts for GUI apps that need admin rights (Thunar mounts, Timeshift, ...)
 exec --no-startup-id /usr/libexec/polkit-mate-authentication-agent-1
@@ -55,7 +54,8 @@ exec_always --no-startup-id ~/.config/polybar/launch.sh
 exec_always --no-startup-id ~/.fehbg
 
 # Start Picom for shadows, rounded corners, and transparency
-exec_always --no-startup-id picom --config ~/.config/picom/picom.conf -b
+# Compositor: picks glx on bare metal, xrender in a VM (scripts/picom-launch.sh)
+exec_always --no-startup-id ~/dotfiles/scripts/picom-launch.sh
 
 # Swap CapsLock and Escape
 exec_always --no-startup-id setxkbmap -option caps:swapescape
