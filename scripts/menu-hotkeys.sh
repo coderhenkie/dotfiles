@@ -86,6 +86,7 @@ describe_action() {
         *lock.sh*)                           echo "${prefix}Lock screen" ;;
         *screenshot.sh*)                     echo "${prefix}Screenshot (area)" ;;
         *menu-power.sh*)                     echo "${prefix}Power menu" ;;
+        *menu-monitors.sh*)                  echo "${prefix}Screens (mirror / extend)" ;;
         *menu-clipboard.sh*)                 echo "${prefix}Clipboard history" ;;
         *menu-calc.sh*)                      echo "${prefix}Calculator" ;;
         *menu-emoji.sh*)                     echo "${prefix}Emoji picker" ;;
