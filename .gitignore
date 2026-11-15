@@ -1,0 +1,34 @@
+# Repo-wide ignores (app folders are symlinked as ~/.config/<app>, so anything an app writes
+# there lands in this repo; per-app .gitignore files list the app-specific runtime files).
+
+# Editor swap/backup files
+*.swp
+*.swo
+.*.sw?
+*~
+\#*\#
+.netrwhist
+
+# Manual backups
+*.bak
+*.bak[0-9]*
+*.bak.*
+*.bk
+*.orig
+*.rej
+
+# Secrets and local overrides: never commit these
+.env
+.env.*
+*.local
+local.env
+*.key
+*.pem
+id_rsa*
+id_ed25519*
+
+# Logs, caches, OS cruft
+*.log
+.cache/
+__pycache__/
+.DS_Store

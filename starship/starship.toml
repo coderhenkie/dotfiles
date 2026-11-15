@@ -8,7 +8,7 @@
 # recolors every open terminal at the next Enter.
 #
 #   ~/dotfiles/scripts  main !2 ?1  4s              (local)
-#   󰌘 user@host ~/dotfiles  main                 (over SSH)
+#   󰌘 user@host ~/dotfiles  main                    (over SSH)
 #   ❯
 #
 # Folder in the accent, git and extras muted, ❯ turns red after a failed command.
