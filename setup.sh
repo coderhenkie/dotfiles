@@ -546,6 +546,9 @@ else
     echo "[OK] Claude Code installed."
 fi
 
+# --- Obsidian vault access for Claude Code and agy (allow rules + shared rules file ai/AGENTS.md) ---
+bash "$DOTFILES_DIR/scripts/ai-vault-access.sh" || echo "[!] Vault access for AI tools not configured (continuing setup)."
+
 # ==========================================
 # 4.8 PATH configuration for ~/.local/bin
 # ==========================================
@@ -670,8 +673,8 @@ fi
 
 # Migrate existing hotkeys.conf files: add the area screenshot hotkey once
 if [ -f "$DOTFILES_DIR/i3/hotkeys.conf" ] && ! grep -Fq "scripts/screenshot.sh" "$DOTFILES_DIR/i3/hotkeys.conf"; then
-    sed -i '/scripts\/lock\.sh/a bindsym Control+Shift+t exec --no-startup-id ~/dotfiles/scripts/screenshot.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
-    echo "[OK] Added screenshot hotkey (Control+Shift+t) to existing i3/hotkeys.conf."
+    sed -i '/scripts\/lock\.sh/a bindsym Control+Shift+s exec --no-startup-id ~/dotfiles/scripts/screenshot.sh' "$DOTFILES_DIR/i3/hotkeys.conf"
+    echo "[OK] Added screenshot hotkey (Control+Shift+s) to existing i3/hotkeys.conf."
 fi
 
 # Migrate existing hotkeys.conf files: add the notification hotkeys once
