@@ -21,6 +21,8 @@
 #        theme_load [file]        read bg/fg/accent from a .theme file as data (never executed);
 #                                 defaults to the active theme, falling back to Dracula
 #        is_hex_color value       exit 0 for #rrggbb
+#        pango_escape text        escape & < > for rofi -markup-rows / -mesg and notifications
+#        help_from_header         print the script's leading comment block (for -h/--help)
 
 # Guard against double sourcing
 [ -n "${_DOTFILES_COMMON_LOADED:-}" ] && return 0
@@ -107,4 +109,15 @@ theme_load() {
         warn "invalid theme file (need bg, fg and accent as #rrggbb): $file"
         return 1
     fi
+}
+
+pango_escape() {
+    local s="$*"
+    s="${s//&/\&amp;}"; s="${s//</\&lt;}"; s="${s//>/\&gt;}"
+    printf '%s\n' "$s"
+}
+
+help_from_header() {
+    # Leading "# " comment lines after the shebang, without the ===== rulers
+    sed -n '2,/^[^#]/{/^#/!d; /^# *=\{3,\}/d; s/^# \{0,1\}//p}' "$0"
 }
