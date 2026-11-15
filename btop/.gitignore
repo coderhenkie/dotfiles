@@ -1,2 +1,7 @@
 btop.log
 themes/
+# btop rewrites btop.conf on exit: the tracked template is btop.conf.default
+# (setup.sh / apply-theme.sh copy it to btop.conf when that is missing)
+btop.conf
+# Stray self-link that `ln -s` creates when ~/.config/btop already exists as a directory
+/btop

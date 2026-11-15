@@ -2,7 +2,7 @@
 # ==========================================
 # Font modules (sourced by setup.sh, apply-theme.sh, menu-font.sh, rofi-icons.sh)
 # ==========================================
-# Every font is a small module in ~/dotfiles/fonts/<id>.font (see iosevka.font).
+# Every font is a small module in <dotfiles>/fonts/<id>.font (see iosevka.font).
 # The active font id is stored in ~/.cache/theme/current.font; apply-theme.sh puts
 # that font into every generated config. Adding a font = adding one .font file.
 #
@@ -11,7 +11,8 @@
 # the LightDM greeter can use them and the picker can install fonts without sudo.
 # Falls back to ~/.local/share/fonts/ColorEngine/<id> when that dir is not available.
 
-FONTS_MODULE_DIR="$HOME/dotfiles/fonts"
+# Repo root from this file's location (lib/ -> scripts/ -> repo), so a clone elsewhere works too
+FONTS_MODULE_DIR="${DOTFILES_DIR:-$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/../.." && pwd)}/fonts"
 FONTS_SYSTEM_DIR="/usr/local/share/fonts/ColorEngine"
 FONTS_USER_DIR="$HOME/.local/share/fonts/ColorEngine"
 FONTS_ACTIVE_FILE="$HOME/.cache/theme/current.font"
@@ -38,7 +39,9 @@ font_ids() {
 font_load() {
     local file="$FONTS_MODULE_DIR/$1.font"
     [ -f "$file" ] || return 1
+    # shellcheck disable=SC2034  # FONT_DESCRIPTION is read by menu-font.sh
     FONT_NAME="" FONT_DESCRIPTION="" FONT_ASSET="" FONT_FILE_PREFIX="" FONT_FAMILY="" FONT_FAMILY_MONO=""
+    # Modules are repo files (fonts/*.font), so sourcing them is trusted
     # shellcheck disable=SC1090
     source "$file"
     FONT_ID="$1"
@@ -46,7 +49,7 @@ font_load() {
 
 font_active() {
     local id
-    id=$(cat "$FONTS_ACTIVE_FILE" 2>/dev/null)
+    id=$(cat "$FONTS_ACTIVE_FILE" 2>/dev/null) || id=""
     [ -n "$id" ] && [ -f "$FONTS_MODULE_DIR/$id.font" ] || id="$FONTS_DEFAULT"
     echo "$id"
 }

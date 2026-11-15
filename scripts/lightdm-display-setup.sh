@@ -8,16 +8,38 @@
 # greeter starts; it applies the saved `main` layout when exactly those screens are connected.
 #
 # Installed root-owned to /usr/local/sbin/ by scripts/lockscreen-setup.sh, which fills in
-# @CONF@ (the user's ~/.config/autorandr/main/config). The config is only read as data.
+# @CONF@ (the user's ~/.config/autorandr/main/config) and @UID@ (that user's uid).
+# Runs as root, so the user-writable config is treated as untrusted data: it must be a regular
+# file (not a symlink) owned by @UID@, and every value is validated before it reaches xrandr.
+# Any doubt -> the layout is not applied (xrandr defaults).
+# Plain /bin/bash with absolute tool paths on purpose: root, minimal environment, no $PATH lookups.
 # Always exits 0: a failing display-setup-script would stop LightDM from showing the screen.
 
 /usr/bin/setxkbmap -option caps:swapescape 2>/dev/null   # Caps Lock <-> Escape, like the session
 
 CONF="@CONF@"
-[ -r "$CONF" ] && command -v xrandr >/dev/null || exit 0
+OWNER_UID="@UID@"
+XRANDR=/usr/bin/xrandr
+
+[ -x "$XRANDR" ] || exit 0
+[ -f "$CONF" ] && [ ! -L "$CONF" ] || exit 0
+[ "$(/usr/bin/stat -c %u "$CONF" 2>/dev/null)" = "$OWNER_UID" ] || exit 0
+
+valid() { # <key> <value>
+    case "$1" in
+        output)    [[ "$2" =~ ^[A-Za-z0-9-]+$ ]] ;;
+        mode|pos)  [[ "$2" =~ ^[0-9]+x[0-9]+$ ]] ;;
+        rate)      [[ "$2" =~ ^[0-9]+(\.[0-9]+)?$ ]] ;;
+        rotate)    [[ "$2" =~ ^(normal|left|right|inverted)$ ]] ;;
+        *)         return 1 ;;
+    esac
+}
 
 args=() wanted=() out=""
 while read -r key val _; do
+    case "$key" in
+        output|mode|pos|rate|rotate) valid "$key" "$val" || exit 0 ;;
+    esac
     case "$key" in
         output)  out=$val; args+=(--output "$val") ;;
         off)     args+=(--off) ;;
@@ -30,8 +52,8 @@ while read -r key val _; do
 done < "$CONF"
 
 # Only when the connected screens are exactly the ones in the profile (other monitors: xrandr default)
-connected=$(xrandr --query | awk '$2 == "connected" {print $1}' | sort)
-[ -n "${wanted[*]}" ] && [ "$connected" = "$(printf '%s\n' "${wanted[@]}" | sort)" ] || exit 0
+connected=$("$XRANDR" --query | /usr/bin/awk '$2 == "connected" {print $1}' | /usr/bin/sort)
+[ -n "${wanted[*]}" ] && [ "$connected" = "$(printf '%s\n' "${wanted[@]}" | /usr/bin/sort)" ] || exit 0
 
-xrandr "${args[@]}" 2>/dev/null
+"$XRANDR" "${args[@]}" 2>/dev/null
 exit 0

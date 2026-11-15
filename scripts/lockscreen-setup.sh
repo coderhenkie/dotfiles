@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # ==========================================
 # LightDM / light-locker Color Engine Provisioning (one-time, needs sudo)
 # ==========================================
@@ -9,24 +8,29 @@
 # current wallpaper colors immediately.
 #
 # Safe to re-run. Called by setup.sh; can also be run standalone:
-#   ~/dotfiles/scripts/lockscreen-setup.sh
+#   <dotfiles>/scripts/lockscreen-setup.sh [-h|--help]
 
-set -eu
+set -euo pipefail
 
-DOTFILES_DIR="$HOME/dotfiles"
-CACHE_DIR="$HOME/.cache/theme"
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
+
 SYS_THEME_DIR="/usr/share/themes/ColorEngine"
 SYS_ICON_DIR="/usr/share/icons/ColorEngine"
 SYS_FONT_DIR="/usr/local/share/fonts/ColorEngine"   # font modules (scripts/lib/fonts.sh)
 
-echo "==> Provisioning LightDM ColorEngine theme directories..."
+log "Provisioning LightDM ColorEngine theme directories..."
 sudo mkdir -p "$SYS_THEME_DIR/gtk-3.0" "$SYS_ICON_DIR" "$SYS_FONT_DIR" /etc/lightdm/lightdm.conf.d
 # User-owned, world-readable: apply-theme.sh / menu-font.sh update them without sudo,
 # and the LightDM greeter (user 'lightdm') can read them
 sudo chown -R "$USER:$USER" "$SYS_THEME_DIR" "$SYS_ICON_DIR" "$SYS_FONT_DIR"
 sudo chmod -R a+rX,u+w "$SYS_THEME_DIR" "$SYS_ICON_DIR" "$SYS_FONT_DIR"
 
-echo "==> Writing LightDM GTK greeter configuration..."
+log "Writing LightDM GTK greeter configuration..."
 sudo tee /etc/lightdm/lightdm-gtk-greeter.conf >/dev/null <<EOF
 [greeter]
 theme-name=ColorEngine
@@ -46,9 +50,13 @@ EOF
 
 # Lock/login screen: Caps Lock <-> Escape and the monitor layout from $mod+p (autorandr `main`).
 # Installed root-owned (LightDM runs it as root), so it is a copy: re-run this script after editing it.
-echo "==> Installing the greeter display setup (monitor layout, Caps/Escape)..."
-sed "s|@CONF@|$HOME/.config/autorandr/main/config|" "$DOTFILES_DIR/scripts/lightdm-display-setup.sh" \
-    | sudo install -o root -g root -m 755 /dev/stdin /usr/local/sbin/lightdm-display-setup
+# The placeholders are filled in with bash string replacement (quoted, so & or | in a path stay literal).
+log "Installing the greeter display setup (monitor layout, Caps/Escape)..."
+display_setup=$(<"$DOTFILES_DIR/scripts/lightdm-display-setup.sh")
+autorandr_conf="$HOME/.config/autorandr/main/config"
+display_setup=${display_setup//@CONF@/"$autorandr_conf"}
+display_setup=${display_setup//@UID@/"$(id -u)"}
+printf '%s\n' "$display_setup" | sudo install -o root -g root -m 755 /dev/stdin /usr/local/sbin/lightdm-display-setup
 sudo tee /etc/lightdm/lightdm.conf.d/50-color-engine.conf >/dev/null <<EOF
 [Seat:*]
 display-setup-script=/usr/local/sbin/lightdm-display-setup
@@ -60,11 +68,9 @@ sudo rm -rf /usr/local/share/fonts/JetBrainsMono /usr/local/share/fonts/Iosevka
 sudo fc-cache -f >/dev/null 2>&1 || true
 
 # Re-apply the active palette (falls back to Dracula) so the system theme gets populated
-echo "==> Syncing active Color Engine palette to the lock screen..."
-THEME_FILE="$CACHE_DIR/current.theme"
-[ -f "$THEME_FILE" ] || THEME_FILE="$DOTFILES_DIR/themes/dracula.theme"
-# shellcheck disable=SC1090
-source "$THEME_FILE"
+log "Syncing active Color Engine palette to the lock screen..."
+# shellcheck disable=SC2119  # theme_load without a file = the active theme
+theme_load || die "No valid Color Engine theme to apply."
 bash "$DOTFILES_DIR/scripts/apply-theme.sh" "$bg" "$fg" "$accent"
 
-echo "[OK] Lock screen now follows the Color Engine. Test it with: lock"
+ok "Lock screen now follows the Color Engine. Test it with: lock"

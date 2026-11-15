@@ -1,10 +1,19 @@
 #!/usr/bin/env bash
 # ==========================================
-# Verified GitHub release downloads (sourced by setup.sh & update-thorium.sh)
+# Verified GitHub release downloads (sourced by setup.sh, update-thorium.sh & lib/fonts.sh users)
 # ==========================================
 # GitHub publishes a SHA-256 digest for every release asset. These helpers only
 # accept a download when its checksum matches that digest, and download into a
 # private temp file first so a failed or tampered download never replaces anything.
+#
+# Note: the digest comes from the same GitHub API as the download URL, so this protects
+# against corrupt or altered downloads in transit, not against a malicious release.
+#
+# Timeouts: API/checksum requests give up after GH_API_TIMEOUT seconds (default 20); asset
+# downloads after GH_DOWNLOAD_TIMEOUT (default 1800) or when they stall below 1 KB/s for a minute.
+
+GH_API_TIMEOUT="${GH_API_TIMEOUT:-20}"
+GH_DOWNLOAD_TIMEOUT="${GH_DOWNLOAD_TIMEOUT:-1800}"
 
 # gh_find_asset <owner/repo> <asset-name-regex>
 #   Prints "<version-tag>|<asset-name>|<download-url>|<sha256-digest>" for the newest
@@ -13,9 +22,9 @@
 gh_find_asset() {
     local repo="$1" regex="$2" json auth=()
     [ -n "${GITHUB_TOKEN:-}" ] && auth=(-H "Authorization: Bearer $GITHUB_TOKEN")
-    json=$(curl -sSL "${auth[@]}" "https://api.github.com/repos/$repo/releases?per_page=20" 2>/dev/null)
-    if jq -e 'type == "object" and (.message // "" | test("rate limit"))' <<< "$json" >/dev/null 2>&1; then
-        echo "[!] GitHub API rate limit reached (60 requests/hour without GITHUB_TOKEN); try again later." >&2
+    if ! json=$(curl -fsSL --max-time "$GH_API_TIMEOUT" --retry 2 "${auth[@]}" \
+            "https://api.github.com/repos/$repo/releases?per_page=20" 2>/dev/null); then
+        echo "[!] GitHub API request for $repo failed (offline, or the rate limit of 60 requests/hour without GITHUB_TOKEN)." >&2
         return 1
     fi
     jq -r --arg re "$regex" '
@@ -35,7 +44,8 @@ gh_download_verified() {
     fi
     mkdir -p "$(dirname "$dest")"
     tmp=$(mktemp "$(dirname "$dest")/.download.XXXXXX") || return 1
-    if ! curl -fL --retry 2 --progress-bar -o "$tmp" "$url"; then
+    if ! curl -fL --retry 2 --connect-timeout "$GH_API_TIMEOUT" --max-time "$GH_DOWNLOAD_TIMEOUT" \
+            --speed-limit 1024 --speed-time 60 --progress-bar -o "$tmp" "$url"; then
         rm -f "$tmp"
         echo "[!] Download failed: $url" >&2
         return 1
@@ -58,6 +68,7 @@ gh_download_verified() {
 gh_check_update() {
     local repo="$1" regex="$2" current="${3#v}" info tag
     info=$(gh_find_asset "$repo" "$regex") || return 2
+    # shellcheck disable=SC2034  # GH_URL / GH_DIGEST are outputs for the caller
     IFS='|' read -r tag _ GH_URL GH_DIGEST <<< "$info"
     GH_LATEST_VERSION="${tag#v}"
     [ -z "$current" ] && return 0
@@ -68,7 +79,7 @@ gh_check_update() {
 # gh_install_latest <owner/repo> <asset-name-regex> <destination>
 #   Convenience wrapper: find the newest matching asset and download it verified.
 gh_install_latest() {
-    local info
+    local info url digest
     info=$(gh_find_asset "$1" "$2") || { echo "[!] No release asset matching '$2' found in $1." >&2; return 1; }
     IFS='|' read -r _ _ url digest <<< "$info"
     gh_download_verified "$url" "$digest" "$3"
@@ -81,8 +92,8 @@ gh_install_latest() {
 gh_install_latest_sumfile() {
     local repo="$1" asset="$2" sumfile="$3" dest="$4" base sum
     base="https://github.com/$repo/releases/latest/download"
-    sum=$(curl -fsSL --retry 2 "$base/$sumfile" 2>/dev/null \
-        | awk -v a="$asset" '$2 == a || $2 == "*" a { print $1; exit }')
+    sum=$(curl -fsSL --max-time "$GH_API_TIMEOUT" --retry 2 "$base/$sumfile" 2>/dev/null \
+        | awk -v a="$asset" '!found && ($2 == a || $2 == "*" a) { print $1; found = 1 }') || sum=""
     if [[ ! "$sum" =~ ^[0-9a-f]{64}$ ]]; then
         echo "[!] No SHA-256 checksum for $asset in $repo's $sumfile; refusing to install it." >&2
         return 1
