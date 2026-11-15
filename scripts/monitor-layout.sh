@@ -13,13 +13,24 @@
 #
 # Primary screen (tray, new workspaces): left with 2 screens, middle with 3, otherwise the first.
 
-set -u
+# No set -e: interactive terminal prompts and optional autorandr/yad calls handle their own exits.
+set -uo pipefail
+
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+# shellcheck source-path=SCRIPTDIR source=lib/monitor-splash.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/monitor-splash.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
+
+need xrandr
 
 PROFILE="main"
 
 if [ -z "${DISPLAY:-}" ] || ! xrandr --query >/dev/null 2>&1; then
-    echo "[!] No X display: run ~/dotfiles/scripts/monitor-layout.sh from inside the desktop session."
-    exit 1
+    die "No X display: run $DOTFILES_DIR/scripts/monitor-layout.sh from inside the desktop session."
 fi
 
 # Connected outputs, in xrandr order
@@ -51,8 +62,8 @@ best_rate() {
 
 # apply_order <output>...: place the outputs left to right, preferred mode, highest refresh rate
 apply_order() {
-    local -a args=() primary
-    local i prev="" rate
+    local -a args=()
+    local primary i prev="" rate
     case $# in
         2) primary=$1 ;;
         3) primary=$2 ;;
@@ -73,48 +84,35 @@ apply_order() {
     xrandr "${args[@]}"
 }
 
-echo "==> Detected $N screen(s):"
+log "Detected $N screen(s):"
 for i in "${!OUTPUTS[@]}"; do
     printf '    %d) %-10s %s\n' "$((i + 1))" "${OUTPUTS[$i]}" "$(describe "${OUTPUTS[$i]}")"
 done
 [ "${1:-}" = "--list" ] && exit 0
 
 if [ "$N" -eq 0 ]; then
-    echo "[!] No connected screens found."
-    exit 1
+    die "No connected screens found."
 fi
 
 if [ "$N" -eq 1 ]; then
     apply_order "${OUTPUTS[0]}"
-    echo "[OK] One screen: nothing to arrange."
+    ok "One screen: nothing to arrange."
     exit 0
 fi
 
 if ! ( : </dev/tty ) 2>/dev/null; then
-    echo "[!] No terminal to ask on: run ~/dotfiles/scripts/monitor-layout.sh later to arrange the screens."
+    warn "No terminal to ask on: run $DOTFILES_DIR/scripts/monitor-layout.sh later to arrange the screens."
     exit 0
 fi
 
 # Put the screens side by side (they may be mirrored now) and show each screen's number on it
 apply_order "${OUTPUTS[@]}"
 sleep 1
-ID_PIDS=()
-if command -v yad >/dev/null 2>&1; then
-    for i in "${!OUTPUTS[@]}"; do
-        geo=$(xrandr --query | awk -v out="${OUTPUTS[$i]}" '$1 == out { for (f = 3; f <= NF; f++) if ($f ~ /^[0-9]+x[0-9]+\+[0-9]+\+[0-9]+$/) { print $f; exit } }')
-        [ -z "$geo" ] && continue
-        IFS='x+' read -r w h x y <<< "$geo"
-        yad --splash --undecorated --no-buttons --skip-taskbar --on-top --no-focus \
-            --title="Screen $((i + 1))" --class="MonitorId" \
-            --width=360 --height=300 --posx=$((x + (w - 360) / 2)) --posy=$((y + (h - 300) / 2)) \
-            --text="<span font='160' weight='bold'>$((i + 1))</span>\n<span font='18'>${OUTPUTS[$i]}</span>" \
-            --text-align=center >/dev/null 2>&1 &
-        ID_PIDS+=($!)
-    done
+if have yad; then
+    monitor_splash_show "${OUTPUTS[@]}"
     echo "    (Every screen now shows its number.)"
 fi
-cleanup() { [ ${#ID_PIDS[@]} -gt 0 ] && kill "${ID_PIDS[@]}" 2>/dev/null; }
-trap cleanup EXIT
+trap monitor_splash_hide EXIT
 
 # Position names, left to right
 case $N in
@@ -145,15 +143,14 @@ done
 ORDER+=("${OUTPUTS[${REMAINING[0]}]}")
 echo "    ${SLOTS[$((N - 1))]}: screen $((REMAINING[0] + 1)) (${OUTPUTS[${REMAINING[0]}]})"
 
-cleanup
-ID_PIDS=()
+monitor_splash_hide
 
 apply_order "${ORDER[@]}"
-echo "[OK] Layout (left -> right): ${ORDER[*]}"
+ok "Layout (left -> right): ${ORDER[*]}"
 
-if command -v autorandr >/dev/null 2>&1; then
+if have autorandr; then
     autorandr --save "$PROFILE" --force >/dev/null && \
-        echo "[OK] Saved as autorandr profile '$PROFILE' (restored at login and when the screens are replugged)."
+        ok "Saved as autorandr profile '$PROFILE' (restored at login and when the screens are replugged)."
     # Same effect as an autorandr switch: re-launch Polybar and the wallpaper for the new layout
     [ -x "$HOME/.config/autorandr/postswitch" ] && AUTORANDR_CURRENT_PROFILE="$PROFILE" "$HOME/.config/autorandr/postswitch"
 fi

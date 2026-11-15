@@ -1,9 +1,24 @@
 #!/usr/bin/env bash
-# Polybar media module: shows "<play/pause icon> Artist - Title" for the active MPRIS player
+# ==========================================
+# Polybar Media Status Module
+# ==========================================
+# Shows "<play/pause icon> Artist - Title" for the active MPRIS player
 # (Spotify, Thorium/YouTube, ...). Prefers a playing player, then Spotify, then any paused one.
 #   polybar-media.sh          -> follow mode (prints a line whenever something changes)
 #   polybar-media.sh toggle   -> play/pause the shown player
 #   polybar-media.sh next|previous
+#
+# Usage: polybar-media.sh [toggle|next|previous|-h|--help]
+
+# No set -e: playerctl returns non-zero when no MPRIS player is active.
+set -uo pipefail
+
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
 
 MAX_LEN=60
 # Nerd Font glyphs, written as escapes so editors/tools can't strip them
@@ -16,8 +31,8 @@ pick_player() {
     [ -z "$players" ] && return 1
 
     # 1. Anything that is playing (Spotify first)
-    for p in $(grep -i '^spotify' <<<"$players") $(grep -iv '^spotify' <<<"$players"); do
-        status=$(playerctl -p "$p" status 2>/dev/null)
+    for p in $(grep -i '^spotify' <<<"$players" || true) $(grep -iv '^spotify' <<<"$players" || true); do
+        status=$(playerctl -p "$p" status 2>/dev/null || true)
         if [ "$status" = "Playing" ]; then echo "$p"; return 0; fi
         if [ "$status" = "Paused" ] && [ -z "$fallback" ]; then fallback="$p"; fi
     done
@@ -34,9 +49,9 @@ print_status() {
         return
     fi
 
-    status=$(playerctl -p "$p" status 2>/dev/null)
-    artist=$(playerctl -p "$p" metadata artist 2>/dev/null)
-    title=$(playerctl -p "$p" metadata title 2>/dev/null)
+    status=$(playerctl -p "$p" status 2>/dev/null || true)
+    artist=$(playerctl -p "$p" metadata artist 2>/dev/null || true)
+    title=$(playerctl -p "$p" metadata title 2>/dev/null || true)
 
     if [ -n "$artist" ] && [ -n "$title" ]; then
         text="$artist - $title"
@@ -57,12 +72,13 @@ print_status() {
 
 case "${1:-}" in
     toggle|next|previous)
+        have playerctl || exit 0
         p=$(pick_player) && playerctl -p "$p" "${1/toggle/play-pause}"
         exit 0
         ;;
 esac
 
-command -v playerctl >/dev/null 2>&1 || { echo ""; exit 0; }
+have playerctl || { echo ""; exit 0; }
 
 # Poll once a second; only print when the text changes so polybar doesn't redraw needlessly.
 last="__init__"

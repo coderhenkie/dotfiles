@@ -17,47 +17,87 @@
 # Remote vault, login token and sync state are kept by `ob` itself; the linked local vault path is
 # stored in ~/.config/obsidian-sync/vault.
 
+# No set -e: daemon loop and status checks expect non-zero exits from pgrep, kill and ob.
+set -uo pipefail
+
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+# shellcheck source-path=SCRIPTDIR source=lib/obsidian.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/obsidian.sh"
+
 OB="$HOME/.local/bin/ob"
 export PATH="$HOME/.local/bin:$PATH"   # ob runs via `env node` (install-node.sh); i3 may start us without it
-APPIMAGE="$HOME/appimages/obsidian.appimage"
 CONF_DIR="$HOME/.config/obsidian-sync"
 VAULT_FILE="$CONF_DIR/vault"
-RUN="${XDG_RUNTIME_DIR:-/tmp}/obsidian-sync"
+RUN="$(runtime_dir)/obsidian-sync"
 PIDFILE="$RUN.pid"
 HOLD="$RUN.hold"
 LOG="$HOME/.cache/obsidian-sync.log"
 
-app_running() { pgrep -x obsidian >/dev/null; }
+ensure_log() {
+    mkdir -p "$(dirname "$LOG")"
+    (umask 077 && : >> "$LOG")
+    chmod 600 "$LOG" 2>/dev/null || true
+}
+
+rotate_log() {
+    ensure_log
+    if [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 1000000 ]; then
+        # Copy + truncate in place so an open append fd keeps writing to the same inode
+        if (umask 077 && tail -n 2000 "$LOG" > "$LOG.tmp"); then
+            cat "$LOG.tmp" > "$LOG"
+            rm -f "$LOG.tmp"
+        fi
+    fi
+}
+
+app_running() { pgrep -x obsidian >/dev/null 2>&1; }
 child_pid() { local p; p=$(cat "$PIDFILE" 2>/dev/null) && kill -0 "$p" 2>/dev/null && echo "$p"; }
 
 stop_child() { # graceful: ob finishes the current transfer on SIGTERM; hard stop after 10 s
-    local pid i                # (its shutdown sometimes hangs on "Waiting to connect to server")
+    local pid                  # (its shutdown sometimes hangs on "Waiting to connect to server")
     pid=$(child_pid) || return 0
-    kill -TERM "$pid" 2>/dev/null
-    for i in $(seq 1 20); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
-    kill -0 "$pid" 2>/dev/null && kill -KILL "$pid" 2>/dev/null
+    kill -TERM "$pid" 2>/dev/null || true
+    for _ in $(seq 1 20); do kill -0 "$pid" 2>/dev/null || break; sleep 0.5; done
+    if kill -0 "$pid" 2>/dev/null; then
+        kill -KILL "$pid" 2>/dev/null || true
+    fi
     rm -f "$PIDFILE"
+    ensure_log
     echo "$(date '+%F %T') headless sync stopped" >> "$LOG"
 }
 
 case "${1:-}" in
+-h|--help)
+    help_from_header
+    exit 0
+    ;;
+
 setup)
-    [ -x "$OB" ] || { echo "Obsidian Headless is missing: run ~/dotfiles/setup.sh (or install-node.sh + npm install -g --prefix ~/.local obsidian-headless)." >&2; exit 1; }
+    [ -x "$OB" ] || die "Obsidian Headless is missing: run $DOTFILES_DIR/setup.sh (or install-node.sh + npm install -g --prefix ~/.local obsidian-headless)."
     vault="${2:-}"
-    if [ -z "$vault" ] && [ -f "$HOME/.config/obsidian/obsidian.json" ]; then
-        vault=$(jq -r '([.vaults[] | select(.open == true) | .path][0]) // ([.vaults[].path][0]) // empty' "$HOME/.config/obsidian/obsidian.json")
+    if [ -z "$vault" ]; then
+        vault=$(obsidian_default_vault || true)
     fi
-    [ -n "$vault" ] || { read -r -p "Local vault folder (created if missing): " vault; vault="${vault/#\~/$HOME}"; }
+    if [ -z "$vault" ]; then
+        read -r -p "Local vault folder (created if missing): " vault
+        vault="${vault/#\~/$HOME}"
+    fi
+    [ -n "$vault" ] || die "No vault path given."
     mkdir -p "$vault"
     vault=$(cd "$vault" && pwd)
 
     if app_running; then
-        echo "Close the Obsidian app first (its own Sync must not run during setup)." >&2; exit 1
+        die "Close the Obsidian app first (its own Sync must not run during setup)."
     fi
     if [ -n "$(ls -A "$vault" 2>/dev/null)" ]; then
-        backup="$HOME/Documents/obsidian-backup-$(basename "$vault")-$(date +%F_%H%M).tar.gz"
-        echo " -> Backup of $vault -> $backup"
-        tar -czf "$backup" -C "$(dirname "$vault")" "$(basename "$vault")" || { echo "Backup failed, stopping." >&2; exit 1; }
+        backup_dir="$HOME/Backups"
+        [ -d "$backup_dir" ] || mkdir -m 700 "$backup_dir"
+        vname="$(basename "$vault")"
+        backup="$backup_dir/obsidian-backup-$vname-$(date +%F_%H%M%S).tar.gz"
+        info "Backup of $vault -> $backup"
+        (umask 077 && tar -czf "$backup" -C "$(dirname "$vault")" "$vname") || die "Backup failed, stopping."
+        chmod 600 "$backup"   # unencrypted copy of private notes: owner-only (old backups are never removed)
     fi
 
     "$OB" login || exit 1
@@ -70,27 +110,27 @@ setup)
     "$OB" sync-config --path "$vault" --conflict-strategy conflict >/dev/null || exit 1
 
     mkdir -p "$CONF_DIR" && printf '%s\n' "$vault" > "$VAULT_FILE"
-    echo; echo "[OK] Linked. Headless sync starts automatically (within a few seconds if the daemon runs,"
+    echo
+    ok "Linked. Headless sync starts automatically (within a few seconds if the daemon runs,"
     echo "     otherwise at the next login). Check with: obsidian-sync.sh status"
     ;;
 
 daemon)
-    exec 9>"$RUN.lock"
-    flock -n 9 || exit 0
-    trap 'stop_child; exit 0' TERM INT
+    i3_env
+    single_instance obsidian-sync
+    ensure_log
+    trap 'stop_child; exit 0' EXIT TERM INT
     fails=0
-    while true; do
-        vault=$(cat "$VAULT_FILE" 2>/dev/null)
+    while session_alive; do
+        vault=$(cat "$VAULT_FILE" 2>/dev/null || true)
         if app_running; then
             stop_child; rm -f "$HOLD"
-        elif [ -f "$HOLD" ] && [ $(( $(date +%s) - $(stat -c %Y "$HOLD") )) -lt 30 ]; then
+        elif [ -f "$HOLD" ] && [ $(( $(date +%s) - $(stat -c %Y "$HOLD" 2>/dev/null || echo 0) )) -lt 30 ]; then
             : # obsidian-app.sh is starting the app
         elif [ -n "$vault" ] && [ -d "$vault" ] && [ -x "$OB" ] && ! child_pid >/dev/null; then
             rm -f "$HOLD"
-            # Keep the log small
-            [ "$(stat -c %s "$LOG" 2>/dev/null || echo 0)" -gt 1000000 ] && tail -n 2000 "$LOG" > "$LOG.tmp" && mv "$LOG.tmp" "$LOG"
+            rotate_log
             echo "$(date '+%F %T') headless sync starting ($vault)" >> "$LOG"
-            started=$(date +%s)
             "$OB" sync --continuous --path "$vault" >> "$LOG" 2>&1 9>&- &
             echo $! > "$PIDFILE"
             # Exits within 30 s = broken (logged out, network, setup): back off, warn once.
@@ -104,7 +144,7 @@ daemon)
                 continue  # handed over to the app (or paused for it): not a failure
             elif ! child_pid >/dev/null; then
                 fails=$((fails + 1))
-                [ "$fails" -eq 3 ] && notify-send -a "Obsidian Sync" -u critical "Headless sync keeps stopping" \
+                [ "$fails" -eq 3 ] && notify -a "Obsidian Sync" -u critical "Headless sync keeps stopping" \
                     "See ~/.cache/obsidian-sync.log (logged out? run: obsidian-sync.sh setup)"
                 sleep $(( fails > 5 ? 300 : 30 ))
             else
@@ -129,11 +169,12 @@ status)
     ;;
 
 log)
+    ensure_log
     exec tail -n 50 -f "$LOG"
     ;;
 
 *)
-    sed -n '2,20p' "$0" | sed 's/^# \{0,1\}//'
+    help_from_header
     exit 1
     ;;
 esac

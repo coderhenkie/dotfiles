@@ -8,9 +8,20 @@
 # scripts/rofi-icons.sh (glyphs in rofi/app-icons.conf, names colorengine-*).
 # Also hides launcher entries that are only noise in Rofi (see HIDE below).
 # Safe to re-run; called by setup.sh.
+#
+# Usage: desktop-entries.sh [-h|--help]
+
+set -euo pipefail
+
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
 
 APPS_DIR="$HOME/.local/share/applications"
-SCRIPTS="$HOME/dotfiles/scripts"
+SCRIPTS="$DOTFILES_DIR/scripts"
 mkdir -p "$APPS_DIR"
 
 # id | Name | Comment (incl. hotkey) | command | search keywords (English + Dutch)
@@ -23,7 +34,7 @@ TOOLS=(
     "clipboard|Clipboard History|Copy an earlier clipboard entry again (\$mod+c)|$SCRIPTS/menu-clipboard.sh menu|clipboard;history;klembord;geschiedenis;paste;"
     "calculator|Calculator|Calculate, convert units and currencies (\$mod+equal)|$SCRIPTS/menu-calc.sh|calculator;calc;math;rekenmachine;rekenen;"
     "emoji|Emoji Picker|Type or copy an emoji (\$mod+Shift+period)|$SCRIPTS/menu-emoji.sh|emoji;smiley;emoticon;"
-    "screenshot|Screenshot|Select an area: saved to ~/Pictures and copied (Ctrl+Shift+t)|$SCRIPTS/screenshot.sh|screenshot;capture;schermafbeelding;printscreen;"
+    "screenshot|Screenshot|Select an area: saved to ~/Pictures and copied (Ctrl+Shift+s)|$SCRIPTS/screenshot.sh|screenshot;capture;schermafbeelding;printscreen;"
     "notifications|Notifications|Silent mode, history and muted apps (\$mod+Shift+n)|$SCRIPTS/menu-notifications.sh menu|notifications;silent;mute;meldingen;stil;"
     "power|Power Menu|Lock, suspend, log out, reboot or shut down (\$mod+Shift+e)|$SCRIPTS/menu-power.sh|power;shutdown;reboot;logout;suspend;afsluiten;herstarten;uitloggen;"
     "lock|Lock Screen|Lock the screen (\$mod+Shift+x)|$SCRIPTS/lock.sh|lock;vergrendelen;"
@@ -56,5 +67,7 @@ for entry in "${HIDE[@]}"; do
     sed '/^NoDisplay=/d; s/^\[Desktop Entry\]$/[Desktop Entry]\nNoDisplay=true/' "$src" > "$APPS_DIR/$entry"
 done
 
-command -v update-desktop-database >/dev/null && update-desktop-database -q "$APPS_DIR" 2>/dev/null
-echo "[OK] Rofi entries for ${#TOOLS[@]} dotfiles tools written; ${#HIDE[@]} entries hidden."
+if have update-desktop-database; then
+    update-desktop-database -q "$APPS_DIR" 2>/dev/null || true
+fi
+ok "Rofi entries for ${#TOOLS[@]} dotfiles tools written; ${#HIDE[@]} entries hidden."

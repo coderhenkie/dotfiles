@@ -74,6 +74,10 @@ async function apply() {
 
 (async () => {
     const cmd = process.argv[2];
+    if (cmd === "-h" || cmd === "--help") {
+        console.log("Usage: darkreader-theme.js apply|pending");
+        process.exit(0);
+    }
     if (cmd !== "apply" && cmd !== "pending") {
         console.error("usage: darkreader-theme.js apply|pending");
         process.exit(1);

@@ -6,13 +6,27 @@
 # and also copied to the clipboard. Bound to $mod+Shift+period.
 # Emoji list comes from the Unicode data in /usr/share/unicode/emoji/emoji-test.txt
 # (package unicode-data); colour glyphs from fonts-noto-color-emoji.
+#
+# Usage: menu-emoji.sh [-h|--help]
+
+# No set -e: rofi returns non-zero when cancelled with Esc.
+set -uo pipefail
+
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
+
+need rofi xclip   # xdotool is optional: without it the emoji is only copied
 
 SOURCE="/usr/share/unicode/emoji/emoji-test.txt"
 CACHE="$HOME/.cache/emoji-list.txt"
 
 if [ ! -f "$SOURCE" ]; then
-    notify-send -a "Emoji" -u critical "Emoji picker" "Missing dependency: unicode-data" 2>/dev/null
-    exit 1
+    notify -a "Emoji" -u critical "Emoji picker" "Missing dependency: unicode-data"
+    die "Missing dependency: unicode-data ($SOURCE)"
 fi
 
 # Build "<emoji>  <name>  (<group>)" once; rebuild when the Unicode data changes
@@ -30,11 +44,11 @@ if [ ! -s "$CACHE" ] || [ "$SOURCE" -nt "$CACHE" ]; then
         }' "$SOURCE" > "$CACHE"
 fi
 
-choice=$(rofi -dmenu -i -p "Emoji" -theme-str 'window { width: 40%; } listview { lines: 12; }' < "$CACHE")
+choice=$(rofi -dmenu -i -p "Emoji" -theme-str 'window { width: 40%; } listview { lines: 12; }' < "$CACHE") || exit 0
 [ -z "$choice" ] && exit 0
 emoji="${choice%%  *}"
 
 printf '%s' "$emoji" | xclip -selection clipboard
 # Give focus back to the previous window before typing
 sleep 0.15
-xdotool type --clearmodifiers -- "$emoji" 2>/dev/null
+xdotool type --clearmodifiers -- "$emoji" 2>/dev/null || true

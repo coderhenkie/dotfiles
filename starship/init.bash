@@ -1,14 +1,15 @@
+# shellcheck shell=bash
 # ==========================================
 # Starship prompt for Bash (sourced from ~/.bashrc, hook added by setup.sh)
 # ==========================================
-# Layout: ~/dotfiles/starship/starship.toml   Colors: ~/.cache/theme/starship-palette.toml
+# Layout: <dotfiles>/starship/starship.toml   Colors: ~/.cache/theme/starship-palette.toml
 # Both are merged into ~/.cache/theme/starship.toml by scripts/apply-theme.sh.
 
 command -v starship >/dev/null 2>&1 || return 0
 # The Linux console (TTY) has no Nerd Font: keep the plain Debian prompt there
 [ "${TERM:-}" = "linux" ] && return 0
 
-__ce_starship_layout="$HOME/dotfiles/starship/starship.toml"
+__ce_starship_layout="${DOTFILES_DIR:-$HOME/dotfiles}/starship/starship.toml"
 __ce_starship_palette="$HOME/.cache/theme/starship-palette.toml"
 export STARSHIP_CONFIG="$HOME/.cache/theme/starship.toml"
 
@@ -34,20 +35,30 @@ __ce_window_title() { printf '\e]0;%s\a' "${PWD/#$HOME/\~}"; }
 # not for programs you work in and close yourself (editors, ssh, monitors, REPLs), and not when
 # a command was stopped with Ctrl+C. Add programs to skip with: CE_NOTIFY_SKIP+=(name) in ~/.bashrc
 CE_NOTIFY_AFTER=${CE_NOTIFY_AFTER:-60}
-CE_NOTIFY_SKIP=(nvim vim vi view nano micro emacs less more most man info bat htop btop top atop nvtop
-    ssh mosh sftp ftp telnet tmux screen zellij herdr claude obsidian lazygit tig yazi ranger nnn lf mc
-    python python3 ipython node bash sh zsh fish psql mysql sqlite3 watch fzf cmatrix weechat irssi
-    nmtui bluetoothctl alsamixer pulsemixer ncdu journalctl dmesg "${CE_NOTIFY_SKIP[@]}")
+for __ce_skip in nvim vim vi view nano micro emacs less more most man info bat htop btop top atop nvtop \
+    ssh mosh sftp ftp telnet tmux screen zellij herdr claude obsidian lazygit tig yazi ranger nnn lf mc \
+    python python3 ipython node bash sh zsh fish psql mysql sqlite3 watch fzf cmatrix weechat irssi \
+    nmtui bluetoothctl alsamixer pulsemixer ncdu journalctl dmesg; do
+    case " ${CE_NOTIFY_SKIP[*]:-} " in
+        *" $__ce_skip "*) ;;
+        *) CE_NOTIFY_SKIP+=("$__ce_skip") ;;
+    esac
+done
+unset __ce_skip
+
 __ce_notify_finished() {
     local status=${STARSHIP_CMD_STATUS:-0} start=${STARSHIP_START_TIME-}
     [ -n "$start" ] && command -v notify-send >/dev/null || return 0
     local now=${EPOCHREALTIME/[.,]/}; now=$((now / 1000))    # ms, like `starship time`
     local secs=$(( (now - start) / 1000 ))
     [ "$secs" -ge "$CE_NOTIFY_AFTER" ] && [ "$status" -ne 130 ] || return 0   # 130 = Ctrl+C
-    local cmd word
+    local cmd word=""
+    local -a words=()
     cmd=$(fc -ln -1 2>/dev/null); cmd="${cmd#"${cmd%%[![:space:]]*}"}"
     # The program that ran: skip sudo/env/time/VAR=value prefixes and a path (/usr/bin/nvim)
-    for word in $cmd; do
+    # Use read -ra to split into words without pathname expansion (globbing)
+    read -ra words <<< "$cmd"
+    for word in "${words[@]}"; do
         case "$word" in sudo|doas|env|time|nice|nohup|command|exec|*=*|-*) continue ;; esac
         word=${word##*/}; break
     done
@@ -61,6 +72,7 @@ __ce_notify_finished() {
     disown 2>/dev/null
 }
 __ce_precmd() { __ce_notify_finished; __ce_window_title; }
+# shellcheck disable=SC2034  # Read by starship's bash prompt hook
 starship_precmd_user_func="__ce_precmd"
 
 eval "$(starship init bash)"

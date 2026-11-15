@@ -16,15 +16,23 @@
 # i3, Polybar, Rofi, dunst and open kitty windows follow immediately; apps that read the DPI
 # only at startup (Thorium, GTK apps) pick it up when they are reopened.
 
-set -u
+# No set -e: pkill/dunstctl/i3-msg may return non-zero when called outside an active session.
+set -uo pipefail
 
-CACHE_DIR="$HOME/.cache/theme"
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
+
+CACHE_DIR="$THEME_CACHE"
 SCALE_FILE="$CACHE_DIR/ui-scale"
 STEP=10 MIN=50 MAX=250
 BAR_HEIGHT=27   # Polybar height at 100%
 
 mkdir -p "$CACHE_DIR"
-scale=$(cat "$SCALE_FILE" 2>/dev/null)
+scale=$(cat "$SCALE_FILE" 2>/dev/null || true)
 [[ "$scale" =~ ^[0-9]+$ ]] || scale=100
 
 # round(value x scale%)
@@ -47,33 +55,28 @@ set_xft_dpi() {
     echo "Xft.dpi: $(pct "$(base_dpi)")" | xrdb -merge
 }
 
-find_i3() {
-    export DISPLAY="${DISPLAY:-:0}"
-    if [ -z "${I3SOCK:-}" ]; then
-        I3SOCK=$(ls "/run/user/$(id -u)/i3/"ipc-socket.* 2>/dev/null | head -n 1)
-        [ -n "$I3SOCK" ] && export I3SOCK
-    fi
-}
-
 # Live reload: i3 restarts in place (keeps windows, re-reads Xft.dpi, relaunches Polybar via
 # exec_always); dunst restarts with the next notification, keeping silent mode as it was.
 reload() {
     local paused
     paused=$(dunstctl is-paused 2>/dev/null || echo false)
-    pkill -x dunst 2>/dev/null
-    i3-msg restart >/dev/null 2>&1
-    notify-send -a "Display" -u low -h string:x-dunst-stack-tag:ui-scale \
-        "UI scale: $scale%" "Reopen Thorium and GTK apps to resize them too" 2>/dev/null
-    [ "$paused" = true ] && dunstctl set-paused true 2>/dev/null
+    pkill -x dunst 2>/dev/null || true
+    i3-msg restart >/dev/null 2>&1 || true
+    notify -a "Display" -u low -h string:x-dunst-stack-tag:ui-scale \
+        "UI scale: $scale%" "Reopen Thorium and GTK apps to resize them too"
+    if [ "$paused" = true ]; then
+        dunstctl set-paused true 2>/dev/null || true
+    fi
 }
 
 case "${1:-status}" in
     up|down|reset)
-        find_i3
+        need xrdb i3-msg
+        i3_env
         # Serialize quick repeated key presses
         exec 9>"$CACHE_DIR/.ui-scale.lock"
         flock 9
-        scale=$(cat "$SCALE_FILE" 2>/dev/null)
+        scale=$(cat "$SCALE_FILE" 2>/dev/null || true)
         [[ "$scale" =~ ^[0-9]+$ ]] || scale=100
         case "$1" in
             up)    scale=$(( scale + STEP )) ;;
@@ -89,15 +92,18 @@ case "${1:-status}" in
         ;;
     apply)
         # Login: ~/.Xresources first (base DPI), then the scaled DPI on top
-        find_i3
+        need xrdb
+        i3_env
         [ -f "$HOME/.Xresources" ] && xrdb -merge "$HOME/.Xresources"
         write_files
         set_xft_dpi
         # i3 read Xft.dpi before this ran: restart it in place when the scale is not 100%
-        [ "$scale" != 100 ] && i3-msg restart >/dev/null 2>&1
+        if [ "$scale" != 100 ]; then
+            i3-msg restart >/dev/null 2>&1 || true
+        fi
         ;;
     files)  write_files ;;
     status) echo "$scale%" ;;
-    *) echo "Usage: $0 up|down|reset|apply|files|status" >&2; exit 1 ;;
+    *) help_from_header; exit 1 ;;
 esac
 exit 0

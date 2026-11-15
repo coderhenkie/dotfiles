@@ -19,11 +19,17 @@
 #   lock-suspend.sh            run the watcher (single instance)
 #   lock-suspend.sh --status   show machine type and current lock state
 
-set -u
+# No set -e: background daemon loop where light-locker-command and systemctl may return non-zero.
+set -uo pipefail
 
-DOTFILES_DIR="$HOME/dotfiles"
-# shellcheck source=lib/machine.sh
-source "$DOTFILES_DIR/scripts/lib/machine.sh"
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+# shellcheck source-path=SCRIPTDIR source=lib/machine.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/machine.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
 
 SUSPEND_AFTER="${LOCK_SUSPEND_AFTER:-1800}"
 POLL_INTERVAL=30
@@ -33,7 +39,7 @@ is_locked() {
     # light-locker reports the screensaver as active while the lock is up
     LC_ALL=C light-locker-command -q 2>/dev/null | grep -q 'is active' || return 1
     # ...and the greeter has taken over the seat, so our session is inactive
-    [ "$(loginctl show-session "$SESSION" -p Active --value 2>/dev/null)" = "no" ]
+    [ "$(loginctl show-session "$SESSION" -p Active --value 2>/dev/null || true)" = "no" ]
 }
 
 if [ "${1:-}" = "--status" ]; then
@@ -49,16 +55,16 @@ if [ "${1:-}" = "--status" ]; then
 fi
 
 if machine_is_vm; then
-    echo "lock-suspend: $(machine_type) detected, auto-suspend disabled." >&2
+    warn "lock-suspend: $(machine_type) detected, auto-suspend disabled."
     exit 0
 fi
 
+i3_env
 # Single instance per user (i3 restarts must not start a second watcher)
-exec 9>"${XDG_RUNTIME_DIR:-/tmp}/lock-suspend.lock"
-flock -n 9 || exit 0
+single_instance lock-suspend
 
 locked_since=""
-while true; do
+while session_alive; do
     now=$(date +%s)
     if is_locked; then
         [ -z "$locked_since" ] && locked_since=$now

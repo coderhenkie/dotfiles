@@ -12,22 +12,31 @@
 # rofi/app-icons.conf (by icon name, then by .desktop category, then a default).
 # Skips the work when colour, mapping and installed apps are unchanged.
 
-set -u
+# No set -e: optional .desktop dirs or gtk-update-icon-cache may be absent.
+set -uo pipefail
+
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+# shellcheck source-path=SCRIPTDIR source=lib/fonts.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/fonts.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
 
 COLOR="${1:-}"
-[[ "$COLOR" =~ ^#[0-9A-Fa-f]{6}$ ]] || { echo "Usage: $0 <#rrggbb>" >&2; exit 1; }
+is_hex_color "$COLOR" || die "Usage: ${0##*/} <#rrggbb>"
 
-MAP="$HOME/dotfiles/rofi/app-icons.conf"
-# shellcheck source=lib/fonts.sh
-source "$HOME/dotfiles/scripts/lib/fonts.sh"
+need convert
+
+MAP="$DOTFILES_DIR/rofi/app-icons.conf"
 FONT=$(font_file "$(font_active)")   # active font module; every Nerd Font has the same glyphs
 THEME_DIR="$HOME/.local/share/icons/ColorEngine-Apps"
 ICON_DIR="$THEME_DIR/128x128/apps"
 STAMP="$THEME_DIR/.stamp"
 APP_DIRS=("$HOME/.local/share/applications" /usr/local/share/applications /usr/share/applications)
 
-command -v convert >/dev/null 2>&1 || { echo "[!] rofi-icons: ImageMagick (convert) missing." >&2; exit 1; }
-[ -f "$FONT" ] || { echo "[!] rofi-icons: $FONT missing." >&2; exit 1; }
+[ -f "$FONT" ] || die "rofi-icons: $FONT missing."
 
 # --- Mapping tables from app-icons.conf ---
 declare -A ICON_GLYPH CAT_GLYPH
@@ -47,7 +56,7 @@ done < "$MAP"
 mapfile -t APPS < <(
     for d in "${APP_DIRS[@]}"; do
         [ -d "$d" ] && for f in "$d"/*.desktop; do [ -f "$f" ] && printf '%s\t%s\n' "$(basename "$f")" "$f"; done
-    done | awk -F'\t' '!seen[$1]++ { print $2 }' | while read -r f; do
+    done | awk -F'\t' '!seen[$1]++ { print $2 }' | while IFS= read -r f; do
         awk -F= '
             /^\[/ { in_entry = ($0 == "[Desktop Entry]"); next }
             in_entry && $1 == "Icon"       && !icon  { icon = substr($0, 6) }
@@ -55,8 +64,8 @@ mapfile -t APPS < <(
             in_entry && $1 == "NoDisplay"  { nodisplay = $2 }
             in_entry && $1 == "Hidden"     { hidden = $2 }
             END {
-                # Absolute icon paths cannot be overridden by an icon theme
-                if (icon != "" && icon !~ /^\// && nodisplay != "true" && hidden != "true")
+                # Absolute icon paths and names with slashes cannot be overridden by an icon theme
+                if (icon != "" && icon !~ /\// && nodisplay != "true" && hidden != "true")
                     print icon "|" cats
             }' "$f"
     done | sort -u
@@ -85,7 +94,8 @@ Context=Applications
 Type=Scalable
 EOF
 
-# --- Pick a glyph per icon name and render them in parallel ---
+# --- Pick a glyph per icon name and render them in parallel (newline-delimited for safety with spaces/quotes) ---
+# shellcheck disable=SC2016  # $0..$3 expand inside the child bash -c
 for entry in "${APPS[@]}"; do
     icon="${entry%%|*}" cats="${entry#*|}" code=""
     code="${ICON_GLYPH[$icon]:-}"
@@ -94,14 +104,18 @@ for entry in "${APPS[@]}"; do
             [[ ";$cats;" == *";$cat;"* ]] && { code="${CAT_GLYPH[$cat]}"; break; }
         done
     fi
-    printf '%s %s\n' "$icon" "${code:-$DEFAULT_GLYPH}"
-done | xargs -P "$(nproc)" -L 1 bash -c '
+    printf '%s|%s\n' "$icon" "${code:-$DEFAULT_GLYPH}"
+done | xargs -r -d '\n' -P "$(nproc)" -n 1 bash -c '
+    icon="${3%|*}"
+    code="${3##*|}"
+    case "$icon" in ""|*/*|*..*) exit 0 ;; esac
     convert -background none -fill "$0" -font "$1" -pointsize 256 \
-        "label:$(printf "\\U$(printf %08x 0x$4)")" \
+        "label:$(printf "\\U$(printf %08x "0x$code")")" \
         -trim +repage -resize 104x104 -gravity center -extent 128x128 \
-        "$2/$3.png"
+        "$2/$icon.png"
 ' "$COLOR" "$FONT" "$ICON_DIR"
 
 gtk-update-icon-cache -q -f -t "$THEME_DIR" 2>/dev/null || true
 echo "$signature" > "$STAMP"
-echo "[OK] Rofi icons rendered in $COLOR ($(ls "$ICON_DIR" | wc -l) apps)."
+count=$(find "$ICON_DIR" -maxdepth 1 -type f -name '*.png' | wc -l)
+ok "Rofi icons rendered in $COLOR ($count apps)."

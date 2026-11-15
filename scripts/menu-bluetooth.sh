@@ -9,8 +9,22 @@
 # come from blueman-applet, which stays running as the pairing agent). Also: power on/off
 # and blueman-manager for advanced settings. Themed via ~/.cache/theme/rofi.rasi like every
 # other menu-*.sh.
+#
+# Usage: menu-bluetooth.sh [-h|--help]
 
-ICON_ON=$'\U000F00AF'       # nf-md-bluetooth
+# No set -e: rofi exits non-zero on Esc/cancel and bluetoothctl returns non-zero when offline/unreachable.
+set -uo pipefail
+
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
+
+need bluetoothctl rofi
+i3_env
+
 ICON_OFF=$'\U000F00B2'      # nf-md-bluetooth_off
 ICON_CHECK=$'\U000F012C'    # nf-md-check
 ICON_SCAN=$'\U000F00B1'     # nf-md-bluetooth_settings (searching)
@@ -25,20 +39,18 @@ ICON_PHONE=$'\U000F011C'    # nf-md-cellphone
 ICON_GAMEPAD=$'\U000F0296'  # nf-md-gamepad_variant
 ICON_COMPUTER=$'\U000F0379' # nf-md-monitor
 
-export DISPLAY="${DISPLAY:-:0}"
-
-notify() { notify-send -a "Bluetooth" "$@"; }
+notify_bt() { notify -a "Bluetooth" "$@"; }
 
 rofi_menu() { # $1 prompt, $2 lines; options on stdin; prints the chosen index
     rofi -dmenu -i -format i -p "$1" -theme-str "window { width: 30%; } listview { lines: $2; }"
 }
 
-[ -n "$(ls -A /sys/class/bluetooth 2>/dev/null)" ] || { notify "No Bluetooth adapter found"; exit 0; }
+[ -n "$(ls -A /sys/class/bluetooth 2>/dev/null)" ] || { notify_bt "No Bluetooth adapter found"; exit 0; }
 
 powered() { bluetoothctl show 2>/dev/null | grep -q 'Powered: yes'; }
 
 power_on() {
-    rfkill unblock bluetooth 2>/dev/null
+    rfkill unblock bluetooth 2>/dev/null || true
     bluetoothctl power on >/dev/null
     sleep 1
 }
@@ -61,16 +73,16 @@ list_devices() { bluetoothctl devices "$@" 2>/dev/null | awk '$1 == "Device" { m
 
 connect() { # $1 mac, $2 name
     if bluetoothctl connect "$1" 2>&1 | grep -q 'Connection successful'; then
-        notify "Connected" "$2"
+        notify_bt "Connected" "$2"
     else
-        notify -u critical "Could not connect to $2" "Is it switched on and in range?"
+        notify_bt -u critical "Could not connect to $2" "Is it switched on and in range?"
     fi
 }
 
 pair_new() {
     local paired rows=() macs=() mac name icon
-    notify -t 10000 "Scanning for devices…" "Put your device in pairing mode"
-    bluetoothctl --timeout 10 scan on >/dev/null 2>&1
+    notify_bt -t 10000 "Scanning for devices…" "Put your device in pairing mode"
+    bluetoothctl --timeout 10 scan on >/dev/null 2>&1 || true
     paired=$(list_devices Paired | cut -f1)
     while IFS=$'\t' read -r mac name; do
         grep -Fxq -- "$mac" <<< "$paired" && continue
@@ -81,7 +93,7 @@ pair_new() {
     done < <(list_devices)
 
     if [ ${#rows[@]} -eq 0 ]; then
-        notify "No new devices found" "Make sure the device is in pairing mode, then try again"
+        notify_bt "No new devices found" "Make sure the device is in pairing mode, then try again"
         return
     fi
     rows+=("$ICON_SCAN  Scan again"); macs+=(rescan)
@@ -93,12 +105,12 @@ pair_new() {
     [ "$mac" = rescan ] && { pair_new; return; }
     name=${rows[$idx]#*  }
 
-    notify "Pairing…" "$name"
+    notify_bt "Pairing…" "$name"
     if bluetoothctl pair "$mac" 2>&1 | grep -qE 'Pairing successful|AlreadyExists'; then
         bluetoothctl trust "$mac" >/dev/null
         connect "$mac" "$name"
     else
-        notify -u critical "Pairing with $name failed" "Put it in pairing mode and try again"
+        notify_bt -u critical "Pairing with $name failed" "Put it in pairing mode and try again"
     fi
 }
 
@@ -110,7 +122,7 @@ main() {
     else
         rows+=("$ICON_OFF  Turn Bluetooth off"); actions+=(power-off)
 
-        local mac name info icon mark battery connected_rows=() connected_actions=() other_rows=() other_actions=()
+        local mac name info icon battery connected_rows=() connected_actions=() other_rows=() other_actions=()
         while IFS=$'\t' read -r mac name; do
             info=$(bluetoothctl info "$mac" 2>/dev/null)
             icon=$(device_icon "$(awk -F': ' '/Icon:/ { print $2; exit }' <<< "$info")")
@@ -135,7 +147,7 @@ main() {
     local action=${actions[$idx]}
     case "$action" in
         power-on)  power_on; main ;;
-        power-off) bluetoothctl power off >/dev/null; notify "Bluetooth off" ;;
+        power-off) bluetoothctl power off >/dev/null; notify_bt "Bluetooth off" ;;
         pair)      pair_new ;;
         manager)   setsid blueman-manager >/dev/null 2>&1 & ;;
         on:*|off:*)
@@ -146,8 +158,8 @@ main() {
             choice=$(printf '%s\n' "$first" "$ICON_DISC  Forget $name" | rofi_menu "$name" 2) || exit 0
             case "$choice:$state" in
                 0:off) connect "$mac" "$name" ;;
-                0:on)  bluetoothctl disconnect "$mac" >/dev/null && notify "Disconnected" "$name" ;;
-                1:*)   bluetoothctl remove "$mac" >/dev/null && notify "Forgot" "$name" ;;
+                0:on)  bluetoothctl disconnect "$mac" >/dev/null && notify_bt "Disconnected" "$name" ;;
+                1:*)   bluetoothctl remove "$mac" >/dev/null && notify_bt "Forgot" "$name" ;;
             esac ;;
     esac
 }

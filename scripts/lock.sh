@@ -1,15 +1,22 @@
 #!/usr/bin/env bash
-
 # ==========================================
 # Screen Locker (LightDM + light-locker)
 # ==========================================
 # Syncs the active feh wallpaper with the LightDM GTK Greeter
 # and locks the current session via light-locker / dm-tool.
+#
+# Usage: lock.sh [-h|--help]
 
-set -eu
+set -euo pipefail
 
-DOTFILES_DIR="$HOME/dotfiles"
-CACHE_DIR="$HOME/.cache/theme"
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
+
+CACHE_DIR="$THEME_CACHE"
 SYSTEM_THEME_DIR="/usr/share/themes/ColorEngine"
 DEFAULT_WALLPAPER="$DOTFILES_DIR/wallpapers/background.jpg"
 
@@ -37,12 +44,12 @@ if [ -f "$WALLPAPER_PATH" ]; then
             chmod 644 "$SYSTEM_THEME_DIR/gtk-3.0/gtk.css"
         fi
     elif [ ! -d "$SYSTEM_THEME_DIR" ]; then
-        echo "lock: $SYSTEM_THEME_DIR missing; run ~/dotfiles/scripts/lockscreen-setup.sh once" >&2
+        warn "lock: $SYSTEM_THEME_DIR missing; run $DOTFILES_DIR/scripts/lockscreen-setup.sh once"
     fi
 fi
 
 # 3. Ensure DISPLAY is set when invoked from keybindings or terminal
-export DISPLAY="${DISPLAY:-:0}"
+i3_env
 
 # 4. Ensure light-locker daemon is running in the session
 if ! pgrep -x "light-locker" >/dev/null 2>&1; then
@@ -51,8 +58,8 @@ if ! pgrep -x "light-locker" >/dev/null 2>&1; then
 fi
 
 # 5. Lock the session via light-locker-command (fallback to dm-tool)
-if command -v light-locker-command >/dev/null 2>&1; then
+if have light-locker-command; then
     light-locker-command -l || dm-tool lock
-elif command -v dm-tool >/dev/null 2>&1; then
+elif have dm-tool; then
     dm-tool lock
 fi

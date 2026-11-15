@@ -1,16 +1,28 @@
 #!/usr/bin/env bash
-
 # ==========================================
 # i3 Hotkey Manager (Rofi)
 # ==========================================
 # Interactive Rofi menu to view, rebind (by pressing the key combo directly),
 # or swap i3 hotkeys. Validates every change with 'i3 -C' and reloads i3 live.
+#
+# Usage: menu-hotkeys.sh [-h|--help]
 
-set -u
+# No set -e: rofi returns non-zero on Esc/cancel and i3 -C returns non-zero on validation errors.
+set -uo pipefail
 
-I3_MAIN_CONFIG="$HOME/dotfiles/i3/config"
-I3_DEFAULT_HOTKEYS="$HOME/dotfiles/i3/hotkeys.default"
-I3_CONFIG="$HOME/dotfiles/i3/hotkeys.conf"
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
+
+need rofi i3 i3-msg python3
+i3_env
+
+I3_MAIN_CONFIG="$DOTFILES_DIR/i3/config"
+I3_DEFAULT_HOTKEYS="$DOTFILES_DIR/i3/hotkeys.default"
+I3_CONFIG="$DOTFILES_DIR/i3/hotkeys.conf"
 
 # Initialize hotkeys.conf from hotkeys.default if it does not exist yet
 if [ ! -f "$I3_CONFIG" ] && [ -f "$I3_DEFAULT_HOTKEYS" ]; then
@@ -20,13 +32,6 @@ fi
 ROFI_MAIN='window { width: 45%; } listview { lines: 14; }'
 ROFI_SUB='window { width: 42%; } listview { lines: 6; }'
 ROFI_WAIT='window { width: 40%; } inputbar { enabled: false; } listview { lines: 1; }'
-
-# Ensure DISPLAY and I3SOCK are set even if launched from terminal/SSH
-export DISPLAY="${DISPLAY:-:0}"
-if [ -z "${I3SOCK:-}" ]; then
-    I3SOCK=$(ls "/run/user/$(id -u)/i3/"ipc-socket.* 2>/dev/null | head -n 1 || true)
-    [ -n "$I3SOCK" ] && export I3SOCK
-fi
 
 # ==========================================
 # Helper Functions
@@ -47,7 +52,7 @@ rofi_menu() {
 
 rofi_error() {
     local msg="$1"
-    printf "OK\n" | rofi_menu "Error" "$msg" "$ROFI_SUB" >/dev/null
+    printf "OK\n" | rofi_menu "Error" "$msg" "$ROFI_SUB" >/dev/null || true
 }
 
 reload_i3_safe() {
@@ -60,6 +65,7 @@ reload_i3_safe() {
     sleep 0.15
 }
 
+# shellcheck disable=SC2016  # literal $mod in i3 config
 get_current_mod() {
     if grep -Fq 'set $mod Mod4' "$I3_CONFIG"; then
         echo "Super (Mod4)"
@@ -97,26 +103,26 @@ describe_action() {
         *"ui-scale.sh up"*)                  echo "${prefix}UI scale +10%" ;;
         *"ui-scale.sh down"*)                echo "${prefix}UI scale -10%" ;;
         *"ui-scale.sh reset"*)               echo "${prefix}UI scale reset (100%)" ;;
-        "exec kitty")        echo "${prefix}Open terminal" ;;
-        "kill")              echo "${prefix}Close window" ;;
+        "exec kitty")                        echo "${prefix}Open terminal" ;;
+        "kill")                              echo "${prefix}Close window" ;;
         *"rofi -show drun"*)                 echo "${prefix}App launcher" ;;
-        "focus left")        echo "${prefix}Focus left" ;;
-        "focus down")        echo "${prefix}Focus down" ;;
-        "focus up")          echo "${prefix}Focus up" ;;
-        "focus right")       echo "${prefix}Focus right" ;;
-        "move left")         echo "${prefix}Move window left" ;;
-        "move down")         echo "${prefix}Move window down" ;;
-        "move up")           echo "${prefix}Move window up" ;;
-        "move right")        echo "${prefix}Move window right" ;;
-        "split h")           echo "${prefix}Split horizontal" ;;
-        "split v")           echo "${prefix}Split vertical" ;;
-        "fullscreen toggle") echo "${prefix}Toggle fullscreen" ;;
-        "layout stacking")   echo "${prefix}Layout: stacking" ;;
-        "layout tabbed")     echo "${prefix}Layout: tabbed" ;;
-        "layout toggle split") echo "${prefix}Layout: toggle split" ;;
-        "floating toggle")   echo "${prefix}Toggle floating" ;;
-        "focus mode_toggle") echo "${prefix}Focus tiling/floating" ;;
-        "focus parent")      echo "${prefix}Focus parent" ;;
+        "focus left")                        echo "${prefix}Focus left" ;;
+        "focus down")                        echo "${prefix}Focus down" ;;
+        "focus up")                          echo "${prefix}Focus up" ;;
+        "focus right")                       echo "${prefix}Focus right" ;;
+        "move left")                         echo "${prefix}Move window left" ;;
+        "move down")                         echo "${prefix}Move window down" ;;
+        "move up")                           echo "${prefix}Move window up" ;;
+        "move right")                        echo "${prefix}Move window right" ;;
+        "split h")                           echo "${prefix}Split horizontal" ;;
+        "split v")                           echo "${prefix}Split vertical" ;;
+        "fullscreen toggle")                 echo "${prefix}Toggle fullscreen" ;;
+        "layout stacking")                   echo "${prefix}Layout: stacking" ;;
+        "layout tabbed")                     echo "${prefix}Layout: tabbed" ;;
+        "layout toggle split")               echo "${prefix}Layout: toggle split" ;;
+        "floating toggle")                   echo "${prefix}Toggle floating" ;;
+        "focus mode_toggle")                 echo "${prefix}Focus tiling/floating" ;;
+        "focus parent")                      echo "${prefix}Focus parent" ;;
         "workspace number \$ws"*)
             local ws="${cmd##*\$ws}"
             echo "${prefix}Workspace $ws"
@@ -125,11 +131,11 @@ describe_action() {
             local ws="${cmd##*\$ws}"
             echo "${prefix}Move to workspace $ws"
             ;;
-        "reload")            echo "${prefix}Reload i3" ;;
-        "restart")           echo "${prefix}Restart i3" ;;
+        "reload")                            echo "${prefix}Reload i3" ;;
+        "restart")                           echo "${prefix}Restart i3" ;;
         *"i3-nagbar"*)                       echo "${prefix}Exit i3" ;;
-        'mode "resize"')     echo "${prefix}Enter resize mode" ;;
-        'mode "default"')    echo "${prefix}Exit resize mode" ;;
+        'mode "resize"')                     echo "${prefix}Enter resize mode" ;;
+        'mode "default"')                    echo "${prefix}Exit resize mode" ;;
         *"resize shrink width"*)             echo "${prefix}Shrink width" ;;
         *"resize grow height"*)              echo "${prefix}Grow height" ;;
         *"resize shrink height"*)            echo "${prefix}Shrink height" ;;
@@ -189,7 +195,7 @@ apply_and_validate() {
         cp "$backup_file" "$I3_CONFIG"
         rm -f "$backup_file"
         local short_err
-        short_err=$(echo "$err_out" | grep -E "ERROR:" | head -n 2 | sed 's/&/\&amp;/g; s/</\&lt;/g; s/>/\&gt;/g')
+        short_err=$(pango_escape "$(grep -E "ERROR:" <<< "$err_out" | head -n 2 || true)")
         [ -z "$short_err" ] && short_err="Invalid key or i3 config syntax error."
         rofi_error "<b>Reverted change (invalid syntax):</b>\n<code>$short_err</code>"
         return 1
@@ -229,6 +235,7 @@ delete_line_in_config() {
 # ==========================================
 # Live Key-Combo Capture via X11 + Rofi Popup
 # ==========================================
+# shellcheck disable=SC2016  # literal $mod in i3 config and Python string
 capture_key_combo() {
     local desc="$1"
     local old_key="$2"
@@ -238,12 +245,9 @@ capture_key_combo() {
         mod_var="Mod4"
     fi
 
-    local safe_desc="${desc//&/&amp;}"
-    safe_desc="${safe_desc//</&lt;}"
-    safe_desc="${safe_desc//>/&gt;}"
-    local safe_old="${old_key//&/&amp;}"
-    safe_old="${safe_old//</&lt;}"
-    safe_old="${safe_old//>/&gt;}"
+    local safe_desc safe_old
+    safe_desc=$(pango_escape "$desc")
+    safe_old=$(pango_escape "$old_key")
 
     local msg="<b>$safe_desc</b>  (current: <b>$safe_old</b>)\nPress a single key or key combo now  │  <b>Esc</b> to exit"
 
@@ -282,11 +286,12 @@ if not dpy:
 MOD_NAMES = {
     "Shift_L": "Shift", "Shift_R": "Shift",
     "Control_L": "Control", "Control_R": "Control",
-    "Alt_L": "Mod1", "Alt_R": "Mod1", "Meta_L": "Mod1", "Meta_R": "Mod1",
+    "Alt_L": "Mod1", "Alt_R": "Mod1", "Meta_L": "Meta_L", "Meta_R": "Mod1",
     "Super_L": "Mod4", "Super_R": "Mod4",
     "ISO_Level3_Shift": "Mod5", "Mode_switch": "Mod5",
     "Num_Lock": "Ignore", "Scroll_Lock": "Ignore", "Shift_Lock": "Ignore"
 }
+MOD_NAMES["Meta_L"] = "Mod1"
 
 kc_to_name = {}
 for kc in range(8, 256):
@@ -381,7 +386,7 @@ if rofi_pid > 0:
         pass
 
 print(result)
-')
+' || true)
 
     wait "$rofi_pid" 2>/dev/null || true
     echo "$captured"
@@ -409,12 +414,10 @@ change_key_for_line() {
     fi
 
     local conflict_line=""
-    local conflict_key=""
     local conflict_cmd=""
     while IFS='|' read -r lno m k c; do
         if [ "$m" = "$mode" ] && [ "$lno" != "$lineno" ] && [ "${k,,}" = "${new_key,,}" ]; then
             conflict_line="$lno"
-            conflict_key="$k"
             conflict_cmd="$c"
             break
         fi
@@ -427,21 +430,22 @@ change_key_for_line() {
     if [ -n "$conflict_line" ]; then
         local conflict_desc
         conflict_desc=$(describe_action "$mode" "$conflict_cmd")
-        local c_msg="<b>$new_key</b> is already used by <b>$conflict_desc</b>:"
+        local c_msg
+        c_msg="<b>$(pango_escape "$new_key")</b> is already used by <b>$(pango_escape "$conflict_desc")</b>:"
         local c_choice
         c_choice=$(printf "1. Swap keys (%s ⇄ %s)\n2. Overwrite (remove %s)\n3. Cancel\n" \
-            "$new_key" "$old_key" "$conflict_desc" | rofi_menu "Key Conflict" "$c_msg" "$ROFI_SUB")
+            "$new_key" "$old_key" "$conflict_desc" | rofi_menu "Key Conflict" "$c_msg" "$ROFI_SUB" || true)
 
         case "$c_choice" in
             "1. Swap keys"*)
                 replace_line_in_config "$lineno" "bindsym $new_key $cmd"
                 replace_line_in_config "$conflict_line" "bindsym $old_key $conflict_cmd"
-                apply_and_validate "$backup_file"
+                apply_and_validate "$backup_file" || true
                 ;;
             "2. Overwrite"*)
                 replace_line_in_config "$lineno" "bindsym $new_key $cmd"
                 delete_line_in_config "$conflict_line"
-                apply_and_validate "$backup_file"
+                apply_and_validate "$backup_file" || true
                 ;;
             "3. Cancel"*)
                 rm -f "$backup_file"
@@ -454,7 +458,7 @@ change_key_for_line() {
         esac
     else
         replace_line_in_config "$lineno" "bindsym $new_key $cmd"
-        apply_and_validate "$backup_file"
+        apply_and_validate "$backup_file" || true
     fi
 }
 
@@ -477,21 +481,17 @@ main_loop() {
         menu_records+=("OPEN_NVIM")
 
         while IFS='|' read -r lno mode key cmd; do
-            local desc
+            local desc safe_key safe_desc
             desc=$(describe_action "$mode" "$cmd")
-            local safe_key="${key//&/&amp;}"
-            safe_key="${safe_key//</&lt;}"
-            safe_key="${safe_key//>/&gt;}"
-            local safe_desc="${desc//&/&amp;}"
-            safe_desc="${safe_desc//</&lt;}"
-            safe_desc="${safe_desc//>/&gt;}"
+            safe_key=$(pango_escape "$key")
+            safe_desc=$(pango_escape "$desc")
 
             menu_lines+=("$(printf "%-20s │ %s" "$safe_key" "$safe_desc")")
             menu_records+=("$lno|$mode|$key|$cmd|$desc")
         done < <(parse_bindings)
 
         local chosen_idx
-        chosen_idx=$(printf "%s\n" "${menu_lines[@]}" | rofi_menu "Hotkeys" "$header_msg" "$ROFI_MAIN" -format 'i')
+        chosen_idx=$(printf "%s\n" "${menu_lines[@]}" | rofi_menu "Hotkeys" "$header_msg" "$ROFI_MAIN" -format 'i' || true)
 
         if [ -z "$chosen_idx" ] || ! [[ "$chosen_idx" =~ ^[0-9]+$ ]]; then
             exit 0
@@ -500,11 +500,13 @@ main_loop() {
         local rec="${menu_records[$chosen_idx]:-}"
         case "$rec" in
             "MOD_SWITCH")
-                bash "$HOME/dotfiles/scripts/toggle-modkey.sh" >/dev/null 2>&1
+                bash "$DOTFILES_DIR/scripts/toggle-modkey.sh" >/dev/null 2>&1 || true
                 sleep 0.15
                 ;;
             "OPEN_NVIM")
-                nohup kitty -e "$HOME/.local/bin/nvim" "$I3_CONFIG" >/dev/null 2>&1 &
+                local nvim_bin
+                nvim_bin=$(command -v nvim || echo "$HOME/.local/bin/nvim")
+                nohup kitty -e "$nvim_bin" "$I3_CONFIG" >/dev/null 2>&1 &
                 exit 0
                 ;;
             "")

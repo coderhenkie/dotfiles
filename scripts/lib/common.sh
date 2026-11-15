@@ -18,6 +18,8 @@
 #        runtime_dir              private per-user runtime dir ($XDG_RUNTIME_DIR or a 0700 fallback)
 #        single_instance name     take a non-blocking lock; exits 0 when another instance holds it
 #        i3_env                   export DISPLAY and I3SOCK for scripts started outside the i3 session
+#        session_alive            for daemon loops: false once the graphical (i3/X) session is gone;
+#                                 always true when started without a display (headless use)
 #        theme_load [file]        read bg/fg/accent from a .theme file as data (never executed);
 #                                 defaults to the active theme, falling back to Dracula
 #        is_hex_color value       exit 0 for #rrggbb
@@ -84,9 +86,15 @@ i3_env() {
     if [ -z "${I3SOCK:-}" ]; then
         local s
         for s in "/run/user/$(id -u)/i3/"ipc-socket.*; do
-            [ -S "$s" ] && { export I3SOCK="$s"; break; }
+            if [ -S "$s" ]; then export I3SOCK="$s"; break; fi
         done
     fi
+    return 0   # no i3 running is fine (console/SSH): callers check i3-msg themselves
+}
+
+session_alive() {
+    [ -z "${DISPLAY:-}" ] && return 0
+    pgrep -u "$UID" -x i3 >/dev/null 2>&1 || xset q >/dev/null 2>&1
 }
 
 is_hex_color() { [[ "${1:-}" =~ ^#[0-9a-fA-F]{6}$ ]]; }

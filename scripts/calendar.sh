@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # ==========================================
 # Polybar Calendar Popup (yad)
 # ==========================================
@@ -7,28 +6,40 @@
 # in the top-right corner of the focused monitor, just below the top Polybar.
 # Use the arrows at the top to go to the previous/next month (and year).
 # Click the clock again or press Esc to close it.
+#
+# Usage: calendar.sh [-h|--help]
 
-PID_FILE="${XDG_RUNTIME_DIR:-/tmp}/polybar-calendar.pid"
+# No set -e: yad exits non-zero when closed with Esc or unfocused.
+set -uo pipefail
+
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
+
+PID_FILE="$(runtime_dir)/polybar-calendar.pid"
 WIDTH=300
 BAR_HEIGHT=27
 GAP=8
 
 # Toggle: a second click closes the open calendar
-if [ -f "$PID_FILE" ] && kill -0 "$(cat "$PID_FILE")" 2>/dev/null; then
-    kill "$(cat "$PID_FILE")" 2>/dev/null
-    rm -f "$PID_FILE"
-    exit 0
+if [ -f "$PID_FILE" ]; then
+    old_pid=$(cat "$PID_FILE" 2>/dev/null || true)
+    if [ -n "$old_pid" ] && kill -0 "$old_pid" 2>/dev/null; then
+        kill "$old_pid" 2>/dev/null || true
+        rm -f "$PID_FILE"
+        exit 0
+    fi
 fi
 
-if ! command -v yad >/dev/null 2>&1; then
-    notify-send -a "Calendar" -u critical "Calendar" "Missing dependency: yad (sudo nala install yad)" 2>/dev/null
-    exit 1
-fi
+need yad
 
 # Top-right corner of the focused monitor, just below the top Polybar
 POS_X=10
 POS_Y=$((BAR_HEIGHT + GAP))
-RECT=$(i3-msg -t get_workspaces 2>/dev/null | jq -r '.[] | select(.focused) | .rect | "\(.x) \(.y) \(.width)"' 2>/dev/null)
+RECT=$(i3-msg -t get_workspaces 2>/dev/null | jq -r '.[] | select(.focused) | .rect | "\(.x) \(.y) \(.width)"' 2>/dev/null || true)
 if [ -n "$RECT" ]; then
     read -r RX RY RW <<< "$RECT"
     # The workspace rect already excludes the dock bars, so RY is the bottom edge of the top bar
@@ -46,5 +57,5 @@ yad --calendar \
     --show-weeks \
     "${EXTRA_OPTS[@]}" >/dev/null 2>&1 &
 echo $! > "$PID_FILE"
-wait $!
+wait $! || true
 rm -f "$PID_FILE"

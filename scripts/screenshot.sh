@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-
 # ==========================================
 # Area Screenshot (maim + slop + xclip)
 # ==========================================
@@ -7,15 +6,22 @@
 # result as a PNG in ~/Pictures and copies it to the clipboard so it can be
 # pasted anywhere. Press Esc or right-click to cancel.
 # Bound to Control+Shift+s in i3/hotkeys.default.
+#
+# Usage: screenshot.sh [-h|--help]
 
-for dep in maim xclip; do
-    if ! command -v "$dep" >/dev/null 2>&1; then
-        notify-send -a "Screenshot" -u critical "Screenshot" "Missing dependency: $dep (sudo nala install maim xclip)" 2>/dev/null
-        exit 1
-    fi
-done
+# No set -e: maim exits non-zero when the selection is cancelled with Esc or right-click.
+set -uo pipefail
 
-PICTURES_DIR=$(xdg-user-dir PICTURES 2>/dev/null)
+# shellcheck source-path=SCRIPTDIR source=lib/common.sh
+source "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")/lib/common.sh"
+
+case "${1:-}" in
+    -h|--help) help_from_header; exit 0 ;;
+esac
+
+need maim xclip
+
+PICTURES_DIR=$(xdg-user-dir PICTURES 2>/dev/null || true)
 # xdg-user-dir falls back to $HOME when no Pictures dir is configured
 if [ -z "$PICTURES_DIR" ] || [ "$PICTURES_DIR" = "$HOME" ]; then
     PICTURES_DIR="$HOME/Pictures"
@@ -25,8 +31,9 @@ mkdir -p "$PICTURES_DIR"
 FILE="$PICTURES_DIR/screenshot_$(date +%Y-%m-%d_%H-%M-%S).png"
 
 # Use the Color Engine accent for the selection rectangle
-ACCENT=$(sed -n 's/^accent=#//p' "$HOME/.cache/theme/current.theme" 2>/dev/null)
-[[ "$ACCENT" =~ ^[0-9A-Fa-f]{6}$ ]] || ACCENT="bd93f9"
+# shellcheck disable=SC2119  # theme_load without argument loads active theme
+theme_load 2>/dev/null || accent="#bd93f9"
+ACCENT="${accent#\#}"
 SLOP_COLOR=$(awk -v r=$((16#${ACCENT:0:2})) -v g=$((16#${ACCENT:2:2})) -v b=$((16#${ACCENT:4:2})) \
     'BEGIN { printf "%.3f,%.3f,%.3f,0.25", r/255, g/255, b/255 }')
 
@@ -39,4 +46,4 @@ fi
 
 xclip -selection clipboard -t image/png -i "$FILE"
 
-notify-send -a "Screenshot" -i "$FILE" "Screenshot saved" "${FILE/#$HOME/\~}  (copied to clipboard)" 2>/dev/null || true
+notify -a "Screenshot" -i "$FILE" "Screenshot saved" "${FILE/#$HOME/\~}  (copied to clipboard)"

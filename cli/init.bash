@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # ==========================================
 # CLI tools for Bash: fzf, ripgrep, fd, bat, zoxide (sourced from ~/.bashrc, hook added by setup.sh)
 # ==========================================
@@ -5,7 +6,7 @@
 # bat and ripgrep use ANSI color names, which Kitty maps to the Color Engine palette.
 # Debian names the binaries fdfind/batcat: setup.sh links them as fd/bat in ~/.local/bin.
 
-CE_CLI_DIR="$HOME/dotfiles/cli"
+CE_CLI_DIR="${DOTFILES_DIR:-$HOME/dotfiles}/cli"
 
 # --- bat: syntax-highlighted cat & pager (also for man pages) ---
 if command -v bat >/dev/null 2>&1; then
