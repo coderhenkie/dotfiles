@@ -1,5 +1,5 @@
 # Global rules for AI agents (Claude Code, Antigravity CLI)
-Template: scripts/ai-vault-access.sh fills in {{VAULT}} and writes the result to
+Template: scripts/ai-vault-access.sh fills in the vault path and writes the result to
 ~/.config/ai/AGENTS.md (outside the repo), linked as ~/.claude/CLAUDE.md and ~/.gemini/GEMINI.md.
 
 ## Obsidian vault
