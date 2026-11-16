@@ -49,7 +49,14 @@ local function compute(buf)
     end
     close_until(0, #lines)
 
-    c = { tick = tick, levels = levels, ends = ends }
+    -- Heading layout, to notice when headings were added, removed or moved
+    local sig = {}
+    for i, v in pairs(levels) do
+        if v:sub(1, 1) == ">" then sig[#sig + 1] = i .. v .. ":" .. ends[i] end
+    end
+    table.sort(sig)
+
+    c = { tick = tick, levels = levels, ends = ends, sig = table.concat(sig, ",") }
     cache[buf] = c
     return c
 end
@@ -58,6 +65,53 @@ vim.api.nvim_create_autocmd("BufWipeout", {
     group = vim.api.nvim_create_augroup("markdown_fold_cache", { clear = true }),
     callback = function(ev) cache[ev.buf] = nil end,
 })
+
+-- Neovim doesn't re-run the foldexpr after typing a heading (e.g. "## " in front of a line), so the
+-- old folds stayed and Enter folded the section above it. When the heading layout changed, rebuild
+-- the folds (zx) and close again the headings that were closed.
+local applied = {} -- buf -> sig the folds were last built for
+function M.refresh(buf)
+    local c = compute(buf)
+    if applied[buf] == c.sig then return end
+    applied[buf] = c.sig
+    for _, win in ipairs(vim.fn.win_findbuf(buf)) do
+        vim.api.nvim_win_call(win, function()
+            if vim.wo.foldmethod ~= "expr" then return end
+            local closed, l, n = {}, 1, vim.api.nvim_buf_line_count(buf)
+            while l <= n do
+                local s = vim.fn.foldclosed(l)
+                if s ~= -1 then
+                    closed[vim.fn.getline(s)] = true
+                    l = vim.fn.foldclosedend(l) + 1
+                else
+                    l = l + 1
+                end
+            end
+            local view = vim.fn.winsaveview()
+            vim.cmd("normal! zx")
+            if next(closed) then
+                local reclose = {}
+                for h, e in pairs(c.ends) do
+                    if e > h and closed[vim.fn.getline(h)] then reclose[#reclose + 1] = h end
+                end
+                -- Deepest first, so closing a parent doesn't hide a child we still have to close
+                table.sort(reclose, function(a, b) return c.levels[a] > c.levels[b] end)
+                for _, h in ipairs(reclose) do vim.cmd(h .. "foldclose") end
+            end
+            vim.fn.winrestview(view)
+        end)
+    end
+end
+
+function M.attach(buf)
+    applied[buf] = compute(buf).sig
+    local group = vim.api.nvim_create_augroup("markdown_fold_" .. buf, { clear = true })
+    vim.api.nvim_create_autocmd({ "InsertLeave", "TextChanged" }, {
+        group = group,
+        buffer = buf,
+        callback = function() M.refresh(buf) end,
+    })
+end
 
 function M.expr()
     return compute(vim.api.nvim_get_current_buf()).levels[vim.v.lnum] or "0"

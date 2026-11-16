@@ -11,6 +11,7 @@ vim.b.snacks_indent = false  -- no indent guide "│" under the block the cursor
 -- empty heading folded its parent section. A non-default value here makes LazyVim leave it alone.
 o.foldmethod = "expr"
 o.foldexpr = "v:lua.require'markdown_fold'.expr()"
+require("markdown_fold").attach(vim.api.nvim_get_current_buf())
 
 -- Tab on a heading folds/unfolds its section (like the arrow in Obsidian); elsewhere Tab keeps its
 -- normal meaning (jump forward in the jump list). Enter does the same (lua/plugins/obsidian.lua).
