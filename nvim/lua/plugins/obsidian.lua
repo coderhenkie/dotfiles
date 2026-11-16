@@ -177,6 +177,8 @@ return {
             { "<leader>oy", "<cmd>Obsidian yesterday<cr>", desc = "Yesterday's note" },
             { "<leader>om", "<cmd>Obsidian tomorrow<cr>", desc = "Tomorrow's note" },
             { "<leader>od", "<cmd>Obsidian dailies<cr>", desc = "Daily notes" },
+            -- Month calendar like the app's Calendar plugin (lua/obsidian_calendar.lua)
+            { "<leader>oc", function() require("obsidian_calendar").open() end, desc = "Calendar" },
             { "<leader>of", "<cmd>Obsidian quick_switch<cr>", desc = "Find note" },
             { "<leader>os", "<cmd>Obsidian search<cr>", desc = "Search notes" },
             { "<leader>on", "<cmd>Obsidian new<cr>", desc = "New note" },
