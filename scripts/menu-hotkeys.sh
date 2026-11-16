@@ -144,6 +144,7 @@ describe_action() {
         *"set-sink-volume"*-*|*"volume.sh down"*) echo "${prefix}Volume down" ;;
         *"set-sink-mute"*)                   echo "${prefix}Mute audio" ;;
         *"set-source-mute"*)                 echo "${prefix}Mute mic" ;;
+        *"bt-audio-fix.sh"*)                 echo "${prefix}Bluetooth audio: fix (A2DP)" ;;
         *)
             local clean="${cmd#exec --no-startup-id }"
             clean="${clean#exec }"

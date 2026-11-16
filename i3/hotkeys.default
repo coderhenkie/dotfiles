@@ -44,6 +44,8 @@ bindsym XF86AudioRaiseVolume exec --no-startup-id ~/dotfiles/scripts/volume.sh u
 bindsym XF86AudioLowerVolume exec --no-startup-id ~/dotfiles/scripts/volume.sh down
 bindsym XF86AudioMute exec --no-startup-id pactl set-sink-mute @DEFAULT_SINK@ toggle
 bindsym XF86AudioMicMute exec --no-startup-id pactl set-source-mute @DEFAULT_SOURCE@ toggle
+# Bluetooth headphones stuck on HSP/HFP (mono call quality) -> back to A2DP
+bindsym $mod+Shift+a exec --no-startup-id ~/dotfiles/scripts/bt-audio-fix.sh
 
 # Start a terminal
 bindsym $mod+Return exec kitty
