@@ -6,14 +6,15 @@ o.linebreak = true  -- ...at word boundaries
 o.spell = false     -- LazyVim's English spell check would flag every Dutch word
 vim.b.snacks_indent = false  -- no indent guide "│" under the block the cursor is in
 
--- Fold headings with treesitter, not LSP: LazyVim switches to the LSP's folding ranges once a server
--- attaches, and obsidian.nvim's obsidian-ls ends a heading's range too early (the last lines of a
--- section stayed visible when folded). A non-default value here makes LazyVim leave it alone.
+-- Fold only headings, exactly like Obsidian (lua/markdown_fold.lua). LazyVim would use treesitter or,
+-- once a server attaches, LSP folds: those also fold lists, obsidian-ls ends sections too early and an
+-- empty heading folded its parent section. A non-default value here makes LazyVim leave it alone.
 o.foldmethod = "expr"
-o.foldexpr = "v:lua.vim.treesitter.foldexpr()"
+o.foldexpr = "v:lua.require'markdown_fold'.expr()"
 
 -- Tab on a heading folds/unfolds its section (like the arrow in Obsidian); elsewhere Tab keeps its
--- normal meaning (jump forward in the jump list)
+-- normal meaning (jump forward in the jump list). Enter does the same (lua/plugins/obsidian.lua).
 vim.keymap.set("n", "<Tab>", function()
-    return vim.fn.getline("."):match("^#+%s") and "za" or "<Tab>"
+    local fold = require("markdown_fold")
+    return fold.is_heading() and fold.toggle_keys() or "<Tab>"
 end, { buffer = true, expr = true, desc = "Fold/unfold heading" })

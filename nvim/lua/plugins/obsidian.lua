@@ -142,6 +142,9 @@ return {
                             vim.schedule(function() follow(true) end)
                             return ""
                         end
+                        -- Headings fold with lua/markdown_fold.lua (an empty heading does nothing)
+                        local fold = require("markdown_fold")
+                        if fold.is_heading() then return fold.toggle_keys() end
                         return actions.smart_action()
                     end, { buffer = buf, expr = true, desc = "Open link here / toggle checkbox / fold" })
                     vim.keymap.set("n", "<C-CR>", function()
