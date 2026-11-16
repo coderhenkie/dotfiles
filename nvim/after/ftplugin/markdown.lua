@@ -13,6 +13,9 @@ o.foldmethod = "expr"
 o.foldexpr = "v:lua.require'markdown_fold'.expr()"
 require("markdown_fold").attach(vim.api.nvim_get_current_buf())
 
+-- Enter while typing continues lists and tasks like Obsidian (lua/markdown_list.lua)
+require("markdown_list").attach(vim.api.nvim_get_current_buf())
+
 -- Tab on a heading folds/unfolds its section (like the arrow in Obsidian); elsewhere Tab keeps its
 -- normal meaning (jump forward in the jump list). Enter does the same (lua/plugins/obsidian.lua).
 vim.keymap.set("n", "<Tab>", function()
