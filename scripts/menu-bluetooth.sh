@@ -7,8 +7,9 @@
 # it); pick one to connect / disconnect / forget it. "Pair new device…"
 # scans for ~10 s and pairs + trusts + connects the chosen device (PIN prompts, if any,
 # come from blueman-applet, which stays running as the pairing agent). Also: power on/off
-# and blueman-manager for advanced settings. Themed via ~/.cache/theme/rofi.rasi like every
-# other menu-*.sh.
+# and blueman-manager for advanced settings. While Bluetooth audio is connected, "Fix audio
+# quality (A2DP)" runs bt-audio-fix.sh (headphones stuck on mono call-quality HSP/HFP).
+# Themed via ~/.cache/theme/rofi.rasi like every other menu-*.sh.
 #
 # Usage: menu-bluetooth.sh [-h|--help]
 
@@ -136,6 +137,10 @@ main() {
         rows+=("${connected_rows[@]}" "${other_rows[@]}")
         actions+=("${connected_actions[@]}" "${other_actions[@]}")
 
+        # Headphones stuck on HSP/HFP (mono call quality) -> back to A2DP (scripts/bt-audio-fix.sh)
+        if have pactl && pactl list cards short 2>/dev/null | grep -q 'bluez_card\.'; then
+            rows+=("$ICON_HEADSET  Fix audio quality (A2DP)"); actions+=(audio-fix)
+        fi
         rows+=("$ICON_SCAN  Pair new device…"); actions+=(pair)
     fi
     rows+=("$ICON_SETTINGS  Advanced settings (blueman)…"); actions+=(manager)
@@ -149,6 +154,7 @@ main() {
         power-on)  power_on; main ;;
         power-off) bluetoothctl power off >/dev/null; notify_bt "Bluetooth off" ;;
         pair)      pair_new ;;
+        audio-fix) "$DOTFILES_DIR/scripts/bt-audio-fix.sh" ;;
         manager)   setsid blueman-manager >/dev/null 2>&1 & ;;
         on:*|off:*)
             local state=${action%%:*} rest=${action#*:}
