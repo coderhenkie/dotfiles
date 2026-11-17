@@ -74,7 +74,7 @@ selection {
 
 /* Top panel bar (matches Polybar) */
 #panel_window {
-    background-color: alpha($BG, 0.92);
+    background-color: alpha($BG, 0.88);
     color: $FG;
     border-bottom: 2px solid $ACCENT;
     box-shadow: none;
@@ -123,7 +123,7 @@ selection {
 #power_window,
 #shutdown_dialog,
 #restart_dialog {
-    background-color: alpha($BG, 0.95);
+    background-color: alpha($BG, 0.91);
     color: $FG;
     border: 3px solid $ACCENT;
     border-radius: 4px;
