@@ -38,6 +38,7 @@ TOOLS=(
     "notifications|Notifications|Silent mode, history and muted apps (\$mod+Shift+n)|$SCRIPTS/menu-notifications.sh menu|notifications;silent;mute;meldingen;stil;"
     "power|Power Menu|Lock, suspend, log out, reboot or shut down (\$mod+Shift+e)|$SCRIPTS/menu-power.sh|power;shutdown;reboot;logout;suspend;afsluiten;herstarten;uitloggen;"
     "lock|Lock Screen|Lock the screen (\$mod+Shift+x)|$SCRIPTS/lock.sh|lock;vergrendelen;"
+    "audio-fix|Bluetooth Audio Fix|Headphones back to high quality A2DP sound (\$mod+Shift+a)|$SCRIPTS/bt-audio-fix.sh|audio;bluetooth;headphones;headset;a2dp;sound;profile;koptelefoon;geluid;geluidsprofiel;oortjes;"
     "monitors|Screens|Mirror or extend screens, choose left / right (\$mod+p)|$SCRIPTS/menu-monitors.sh|monitor;monitors;screens;display;layout;mirror;extend;spiegelen;uitbreiden;beeldscherm;scherm;schermen;"
 )
 

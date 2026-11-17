@@ -3,7 +3,7 @@ local o = vim.opt_local
 o.list = false      -- no invisible characters: trailing spaces showed up as "-" (templates are full of them)
 o.wrap = true       -- long lines wrap on screen...
 o.linebreak = true  -- ...at word boundaries
-o.spell = false     -- LazyVim's English spell check would flag every Dutch word
+o.spell = false     -- LazyVim's English spell check would flag every Dutch word (also lua/config/autocmds.lua)
 vim.b.snacks_indent = false  -- no indent guide "│" under the block the cursor is in
 
 -- Fold only headings, exactly like Obsidian (lua/markdown_fold.lua). LazyVim would use treesitter or,

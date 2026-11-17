@@ -6,7 +6,7 @@
 # stuck on HSP/HFP (mono, phone-call quality). When no A2DP profile is offered at all (the
 # A2DP link did not come up on connect), the device is disconnected and reconnected first.
 # Afterwards the headphones become the default output. Result is shown as a notification.
-# Bound to $mod+Shift+a in i3/hotkeys.default.
+# Bound to $mod+Shift+a in i3/hotkeys.default; also in Rofi's app launcher (scripts/desktop-entries.sh).
 #
 # Usage: bt-audio-fix.sh [-h|--help]
 
