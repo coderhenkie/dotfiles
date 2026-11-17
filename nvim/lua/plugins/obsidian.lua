@@ -101,12 +101,34 @@ return {
             -- No format-on-save in vaults: LazyVim's markdown formatters (prettier, markdownlint-cli2
             -- --fix, markdown-toc) would rewrite notes on every :w (list markers, blank lines, tables),
             -- and those rewrites would sync to every device. Code/READMEs outside vaults keep it.
+            -- Also autoread (off everywhere else, lua/config/options.lua): Sync writes changes from
+            -- other devices (e.g. a box ticked on the phone) to notes that may be open here. An
+            -- unchanged note reloads by itself; one with unsaved edits warns (W12) instead of letting
+            -- :w overwrite the synced version.
             vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, {
                 group = vim.api.nvim_create_augroup("obsidian_no_autoformat", { clear = true }),
                 callback = function(ev)
                     if not in_vault(vim.fn.fnamemodify(ev.match, ":p")) then return end
                     vim.b[ev.buf].autoformat = false
+                    vim.b[ev.buf].obsidian_note = true
+                    vim.bo[ev.buf].autoread = true
                 end,
+            })
+            -- autoread only acts when Neovim checks the file, which LazyVim does on focus changes only;
+            -- the daily note stays open and focused all day, so check open notes every 3 s as well
+            -- (normal mode only, so the W12 prompt never interrupts typing)
+            local function check_notes()
+                if vim.api.nvim_get_mode().mode ~= "n" or vim.fn.getcmdwintype() ~= "" then return end
+                for _, buf in ipairs(vim.api.nvim_list_bufs()) do
+                    if vim.api.nvim_buf_is_loaded(buf) and vim.b[buf].obsidian_note then
+                        pcall(vim.cmd.checktime, buf)
+                    end
+                end
+            end
+            vim.uv.new_timer():start(3000, 3000, vim.schedule_wrap(check_notes))
+            vim.api.nvim_create_autocmd({ "FocusGained", "BufEnter", "CursorHold" }, {
+                group = vim.api.nvim_create_augroup("obsidian_autoread", { clear = true }),
+                callback = check_notes,
             })
 
             -- Links like in the Obsidian app:

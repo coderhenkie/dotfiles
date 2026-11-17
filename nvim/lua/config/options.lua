@@ -8,6 +8,9 @@ opt.smartindent = true
 opt.clipboard = "unnamedplus"
 opt.scrolloff = 8
 opt.updatetime = 250
+-- Don't silently reload files changed outside Neovim (Neovim's default is on); Obsidian notes turn
+-- it back on per buffer, since Sync changes them from other devices (lua/plugins/obsidian.lua)
+opt.autoread = false
 
 -- Markdown/Obsidian: hide link and formatting syntax (render-markdown + obsidian.nvim need >= 1)
 opt.conceallevel = 2
