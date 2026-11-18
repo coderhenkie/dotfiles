@@ -100,6 +100,22 @@ Comment=Thorium High-Performance Web Browser
 Categories=Network;WebBrowser;
 EOF
 
+# Discord: web app in its own Thorium profile (scripts/discord.sh). The profile is created at
+# first launch in ~/.local/share/discord-web, outside the repo.
+ln -sfn "$DOTFILES_DIR/scripts/discord.sh" "$LOCAL_BIN/discord"
+cat <<EOF > "$HOME/.local/share/applications/discord-web.desktop"
+[Desktop Entry]
+Name=Discord
+Exec=$DOTFILES_DIR/scripts/discord.sh
+Terminal=false
+Type=Application
+Icon=discord
+StartupWMClass=discord-web
+Comment=Discord web app in an isolated Thorium profile
+Categories=Network;Chat;
+Keywords=discord;chat;voice;bellen;
+EOF
+
 # Configure automatic installation of latest Chrome Web Store extensions for Thorium:
 # 1. Thorium Material Dark Theme (dahfohiipmpcppjbablgfoggbogdmddp)
 # 2. Bitwarden Password Manager  (nngceckbapebfimnlniiiahkandclblb)
