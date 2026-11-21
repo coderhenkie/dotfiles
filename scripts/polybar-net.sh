@@ -5,6 +5,7 @@
 # Replaces the nm-applet tray icon (left-click opens menu-wifi.sh, right-click opens nmtui).
 #   cable plugged in : "󰈀 Wired"
 #   Wi-Fi connected  : "<signal icon> <SSID>"
+#   Wi-Fi outside NM : "<signal icon> <SSID> (unmanaged)" (ifupdown Wi-Fi: menu-wifi.sh can't manage it)
 #   nothing          : muted "disconnected" icon (Wi-Fi icon if the machine has Wi-Fi, else cable icon)
 #
 # Usage: polybar-net.sh [-h|--help]
@@ -55,7 +56,9 @@ done
 if $has_wifi; then
     line=$(nmcli -t -f ACTIVE,SIGNAL,SSID dev wifi list --rescan no 2>/dev/null | grep -m1 '^yes:' || true)
     # Fallback for Wi-Fi that NetworkManager doesn't manage (e.g. set up in /etc/network/interfaces
-    # by the Debian installer, which NM ignores): ask the kernel via iw. Same "yes:SIGNAL:SSID" shape.
+    # by the Debian installer, which NM ignores): ask the kernel via iw. Same "yes:SIGNAL:SSID" shape,
+    # marked "(unmanaged)" so it doesn't look like normal Wi-Fi while the menu can't manage it.
+    unmanaged=""
     if [ -z "$line" ]; then
         IW=$(command -v iw || echo /usr/sbin/iw)
         for d in "${wifi_devs[@]}"; do
@@ -65,16 +68,23 @@ if $has_wifi; then
             dbm=$(sed -n 's/^\s*signal: \(-\?[0-9]*\).*/\1/p' <<< "$link")
             pct=$(( 2 * (${dbm:--100} + 100) )); [ "$pct" -gt 100 ] && pct=100; [ "$pct" -lt 0 ] && pct=0
             line="yes:$pct:$ssid"
+            # Only a marker when NM really doesn't manage the card (or isn't running): NM's scan list can
+            # also briefly miss the connected network right after connecting or resuming
+            state=$(nmcli -t -f DEVICE,STATE dev 2>/dev/null | awk -F: -v d="$d" '$1 == d { print $2 }')
+            case "$state" in
+                ""|unmanaged) unmanaged=" %{F$muted}(unmanaged)%{F-}" ;;
+            esac
             break
         done
     fi
     if [ -n "$line" ]; then
         signal=$(cut -d: -f2 <<< "$line")
+        [[ "$signal" =~ ^[0-9]+$ ]] || signal=0   # nmcli can leave SIGNAL empty right after connecting
         ssid=$(cut -d: -f3- <<< "$line" | sed 's/\\:/:/g')
         icons=(󰤯 󰤟 󰤢 󰤥 󰤨)
         idx=$(( signal / 20 )); [ "$idx" -gt 4 ] && idx=4
         [ "${#ssid}" -gt 20 ] && ssid="${ssid:0:17}..."
-        echo "${icons[$idx]} %{F-}$ssid"
+        echo "${icons[$idx]} %{F-}$ssid$unmanaged"
     else
         echo "%{F$muted}󰤮%{F-}"
     fi

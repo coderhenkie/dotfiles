@@ -245,3 +245,5 @@ source "$DOTFILES_DIR/setup.d/70-hotkeys.sh"
 source "$DOTFILES_DIR/setup.d/80-permissions-lockscreen.sh"
 # shellcheck source-path=SCRIPTDIR source=setup.d/90-theme.sh
 source "$DOTFILES_DIR/setup.d/90-theme.sh"
+# shellcheck source-path=SCRIPTDIR source=setup.d/95-network.sh
+source "$DOTFILES_DIR/setup.d/95-network.sh"

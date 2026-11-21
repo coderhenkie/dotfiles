@@ -32,4 +32,3 @@ if "$LOCAL_BIN/nvim" --headless "+Lazy! restore" +qa >/dev/null 2>&1; then
 else
     warn "Neovim plugins could not be installed now; they install on the first start of nvim."
 fi
-ok "Setup completed!"
