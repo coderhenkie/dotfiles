@@ -17,7 +17,13 @@ case "${1:-}" in
     -h|--help) help_from_header; exit 0 ;;
 esac
 
-"$HOME/.config/polybar/launch.sh" >/dev/null 2>&1 &
+# Start Polybar through i3, not as a child of this hook: on lid events autorandr runs the hook from a system
+# service (autorandr-lid-listener), outside the login session. Polybar and everything it opens (Wi-Fi menu, nmtui)
+# would inherit that, and polkit then refuses them ("Insufficient privileges" when adding a Wi-Fi network).
+i3_env
+if ! i3-msg -q "exec --no-startup-id $HOME/.config/polybar/launch.sh" >/dev/null 2>&1; then
+    "$HOME/.config/polybar/launch.sh" >/dev/null 2>&1 &
+fi
 # 2 screens: workspaces 1-4 on the left screen, 5-10 on the right one
 "$DOTFILES_DIR/scripts/workspaces.sh" >/dev/null 2>&1 &
 [ -x "$HOME/.fehbg" ] && "$HOME/.fehbg" >/dev/null 2>&1 &
